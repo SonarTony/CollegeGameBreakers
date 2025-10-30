@@ -9,13 +9,13 @@
 <body>
 <header class="app-header">
   <h1>Gamebreakers College Football</h1>
-  <p class="tagline">Up to two dice per GB slot • Defense blocks cancel 7s then 3s • Defense 7/2 adds to own total</p>
+  <p class="tagline">Two dice slots per player — set each die to 0–4 or “–” to skip</p>
 </header>
 
 <main class="container">
   <section class="teams">
     <!-- HOME -->
-    <div class="team-card" id="homeTeamCard">
+    <div class="team-card">
       <div class="team-head">
         <input id="homeName" class="team-name" value="Home" aria-label="Home Team Name"/>
         <div class="team-actions">
@@ -26,64 +26,62 @@
 
       <div class="gb-grid">
         <h3>Offense</h3>
-        <!-- Offense rows (O:D + second-die toggles) -->
         <div class="row">
-          <label>QB (O:D)</label>
+          <label>QB (O1,O2)</label>
           <div class="pair">
-            <select id="home_QB_o"></select><span>:</span><select id="home_QB_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_QB_o2"/> +Off die 2</label>
+            <select id="home_QB_o1"></select>
+            <select id="home_QB_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>RB (O:D)</label>
+          <label>RB (O1,O2)</label>
           <div class="pair">
-            <select id="home_RB_o"></select><span>:</span><select id="home_RB_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_RB_o2"/> +Off die 2</label>
+            <select id="home_RB_o1"></select>
+            <select id="home_RB_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>WR (O:D)</label>
+          <label>WR (O1,O2)</label>
           <div class="pair">
-            <select id="home_WR_o"></select><span>:</span><select id="home_WR_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_WR_o2"/> +Off die 2</label>
+            <select id="home_WR_o1"></select>
+            <select id="home_WR_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>OL (O:D)</label>
+          <label>OL (O1,O2)</label>
           <div class="pair">
-            <select id="home_OL_o"></select><span>:</span><select id="home_OL_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_OL_o2"/> +Off die 2</label>
+            <select id="home_OL_o1"></select>
+            <select id="home_OL_o2"></select>
           </div>
         </div>
 
         <h3>Defense</h3>
-        <!-- Defense rows (O:D + second-die toggles) -->
         <div class="row">
-          <label>DL (O:D)</label>
+          <label>DL (D1,D2)</label>
           <div class="pair">
-            <select id="home_DL_o"></select><span>:</span><select id="home_DL_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_DL_d2"/> +Def die 2</label>
+            <select id="home_DL_d1"></select>
+            <select id="home_DL_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>LB (O:D)</label>
+          <label>LB (D1,D2)</label>
           <div class="pair">
-            <select id="home_LB_o"></select><span>:</span><select id="home_LB_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_LB_d2"/> +Def die 2</label>
+            <select id="home_LB_d1"></select>
+            <select id="home_LB_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>DB (O:D)</label>
+          <label>DB (D1,D2)</label>
           <div class="pair">
-            <select id="home_DB_o"></select><span>:</span><select id="home_DB_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_DB_d2"/> +Def die 2</label>
+            <select id="home_DB_d1"></select>
+            <select id="home_DB_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>Flex (DL/LB/DB) (O:D)</label>
+          <label>Flex (D1,D2)</label>
           <div class="pair">
-            <select id="home_FLEX_o"></select><span>:</span><select id="home_FLEX_d"></select>
-            <label class="toggle"><input type="checkbox" id="home_FLEX_d2"/> +Def die 2</label>
+            <select id="home_FLEX_d1"></select>
+            <select id="home_FLEX_d2"></select>
           </div>
         </div>
       </div>
@@ -92,7 +90,7 @@
     <div class="vs">vs</div>
 
     <!-- AWAY -->
-    <div class="team-card" id="awayTeamCard">
+    <div class="team-card">
       <div class="team-head">
         <input id="awayName" class="team-name" value="Away" aria-label="Away Team Name"/>
         <div class="team-actions">
@@ -104,70 +102,84 @@
       <div class="gb-grid">
         <h3>Offense</h3>
         <div class="row">
-          <label>QB (O:D)</label>
+          <label>QB (O1,O2)</label>
           <div class="pair">
-            <select id="away_QB_o"></select><span>:</span><select id="away_QB_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_QB_o2"/> +Off die 2</label>
+            <select id="away_QB_o1"></select>
+            <select id="away_QB_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>RB (O:D)</label>
+          <label>RB (O1,O2)</label>
           <div class="pair">
-            <select id="away_RB_o"></select><span>:</span><select id="away_RB_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_RB_o2"/> +Off die 2</label>
+            <select id="away_RB_o1"></select>
+            <select id="away_RB_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>WR (O:D)</label>
+          <label>WR (O1,O2)</label>
           <div class="pair">
-            <select id="away_WR_o"></select><span>:</span><select id="away_WR_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_WR_o2"/> +Off die 2</label>
+            <select id="away_WR_o1"></select>
+            <select id="away_WR_o2"></select>
           </div>
         </div>
         <div class="row">
-          <label>OL (O:D)</label>
+          <label>OL (O1,O2)</label>
           <div class="pair">
-            <select id="away_OL_o"></select><span>:</span><select id="away_OL_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_OL_o2"/> +Off die 2</label>
+            <select id="away_OL_o1"></select>
+            <select id="away_OL_o2"></select>
           </div>
         </div>
 
         <h3>Defense</h3>
         <div class="row">
-          <label>DL (O:D)</label>
+          <label>DL (D1,D2)</label>
           <div class="pair">
-            <select id="away_DL_o"></select><span>:</span><select id="away_DL_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_DL_d2"/> +Def die 2</label>
+            <select id="away_DL_d1"></select>
+            <select id="away_DL_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>LB (O:D)</label>
+          <label>LB (D1,D2)</label>
           <div class="pair">
-            <select id="away_LB_o"></select><span>:</span><select id="away_LB_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_LB_d2"/> +Def die 2</label>
+            <select id="away_LB_d1"></select>
+            <select id="away_LB_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>DB (O:D)</label>
+          <label>DB (D1,D2)</label>
           <div class="pair">
-            <select id="away_DB_o"></select><span>:</span><select id="away_DB_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_DB_d2"/> +Def die 2</label>
+            <select id="away_DB_d1"></select>
+            <select id="away_DB_d2"></select>
           </div>
         </div>
         <div class="row">
-          <label>Flex (DL/LB/DB) (O:D)</label>
+          <label>Flex (D1,D2)</label>
           <div class="pair">
-            <select id="away_FLEX_o"></select><span>:</span><select id="away_FLEX_d"></select>
-            <label class="toggle"><input type="checkbox" id="away_FLEX_d2"/> +Def die 2</label>
+            <select id="away_FLEX_d1"></select>
+            <select id="away_FLEX_d2"></select>
           </div>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- Controls -->
   <section class="controls">
     <button id="rollAll" class="primary">Roll Game</button>
     <button id="bothRandom" class="ghost">Randomize Both Teams</button>
+  </section>
+
+  <section class="controls bulk">
+    <div class="bulk-group">
+      <span class="bulk-title">Set all O2</span>
+      <button class="ghost" data-bulk="o2-copy">Copy O1</button>
+      <button class="ghost" data-bulk="o2-clear">Set to “–”</button>
+    </div>
+    <div class="bulk-group">
+      <span class="bulk-title">Set all D2</span>
+      <button class="ghost" data-bulk="d2-copy">Copy D1</button>
+      <button class="ghost" data-bulk="d2-clear">Set to “–”</button>
+    </div>
   </section>
 
   <section class="scoreboard">
@@ -193,3 +205,4 @@
 <script src="app.js"></script>
 </body>
 </html>
+

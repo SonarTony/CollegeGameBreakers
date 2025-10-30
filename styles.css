@@ -39,13 +39,20 @@ p{ margin:.25rem 0; }
 label{ color:var(--ink); }
 .pair{ display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
 select{
-  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:58px;
+  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:72px;
 }
-.toggle{ color:var(--muted); font-size:.9rem; display:flex; align-items:center; gap:.4rem; }
 
 .controls{
   display:flex; gap:.6rem; align-items:center; justify-content:center; margin:1rem 0;
 }
+.controls.bulk{
+  gap:1.2rem; flex-wrap:wrap;
+}
+.bulk-group{
+  display:flex; gap:.5rem; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:.5rem .7rem;
+}
+.bulk-title{ color:var(--muted); font-weight:700; }
+
 button{
   background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:.6rem .9rem; cursor:pointer;
 }
@@ -69,3 +76,5 @@ button.primary:hover{ filter:brightness(1.05); }
   .teams{ grid-template-columns:1fr; }
   .vs{ display:none; }
 }
+
+
