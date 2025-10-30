@@ -39,7 +39,7 @@ p{ margin:.25rem 0; }
 label{ color:var(--ink); }
 .pair{ display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
 select{
-  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:72px;
+  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:88px;
 }
 
 .controls{
@@ -76,5 +76,6 @@ button.primary:hover{ filter:brightness(1.05); }
   .teams{ grid-template-columns:1fr; }
   .vs{ display:none; }
 }
+
 
 

@@ -9,7 +9,7 @@
 <body>
 <header class="app-header">
   <h1>Gamebreakers College Football</h1>
-  <p class="tagline">Two dice slots per player — set each die to 0–4 or “–” to skip</p>
+  <p class="tagline">Two dice slots per player — set each die to 0–4 or “–”. Coach has two dice: Off, Def, or “–”.</p>
 </header>
 
 <main class="container">
@@ -82,6 +82,22 @@
           <div class="pair">
             <select id="home_FLEX_d1"></select>
             <select id="home_FLEX_d2"></select>
+          </div>
+        </div>
+
+        <h3>Coach</h3>
+        <div class="row">
+          <label>Coach Die 1</label>
+          <div class="pair">
+            <select id="home_COACH_t1"></select>
+            <select id="home_COACH_r1"></select>
+          </div>
+        </div>
+        <div class="row">
+          <label>Coach Die 2</label>
+          <div class="pair">
+            <select id="home_COACH_t2"></select>
+            <select id="home_COACH_r2"></select>
           </div>
         </div>
       </div>
@@ -159,6 +175,22 @@
             <select id="away_FLEX_d2"></select>
           </div>
         </div>
+
+        <h3>Coach</h3>
+        <div class="row">
+          <label>Coach Die 1</label>
+          <div class="pair">
+            <select id="away_COACH_t1"></select>
+            <select id="away_COACH_r1"></select>
+          </div>
+        </div>
+        <div class="row">
+          <label>Coach Die 2</label>
+          <div class="pair">
+            <select id="away_COACH_t2"></select>
+            <select id="away_COACH_r2"></select>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -205,4 +237,5 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 

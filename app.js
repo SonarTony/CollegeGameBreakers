@@ -1,5 +1,5 @@
-// Gamebreakers College Football — Two explicit dice slots per player.
-// Set each die to 0–4 or “-” (skip).
+// Gamebreakers College Football — Two dice per player (0–4 or “–” to skip).
+// Coach: two dice; each can be Off, Def, or “–”.
 
 // --- Tables ---------------------------------------------------------------
 const OFF_TABLE = {
@@ -20,13 +20,13 @@ const DEF_TABLE = {
 const OFF_SLOTS = ["QB","RB","WR","OL"];
 const DEF_SLOTS = ["DL","LB","DB","FLEX"];
 
-// --- Utility --------------------------------------------------------------
+// --- Utilities ------------------------------------------------------------
 function d6(){ return 1 + Math.floor(Math.random()*6); }
-function isSkip(v){ return v === "-" || v === "" || v == null; }
-function toRating(v){ return isSkip(v) ? null : Math.max(0, Math.min(4, v|0)); }
+function isDash(v){ return v === "-" || v === "–" || v === "" || v == null; }
+function toRating(v){ return isDash(v) ? null : Math.max(0, Math.min(4, v|0)); }
 
-// --- Populate selects (0–4 and “-”) --------------------------------------
-function fillSelect(id){
+// --- Populate selects -----------------------------------------------------
+function fillRatingSelect(id){
   const sel = document.getElementById(id);
   sel.innerHTML = "";
   const dash = document.createElement("option");
@@ -39,6 +39,15 @@ function fillSelect(id){
     sel.appendChild(opt);
   }
 }
+function fillCoachTypeSelect(id){
+  const sel = document.getElementById(id);
+  sel.innerHTML = "";
+  [["-","–"],["OFF","Off"],["DEF","Def"]].forEach(([val,txt])=>{
+    const opt = document.createElement("option");
+    opt.value = val; opt.textContent = txt;
+    sel.appendChild(opt);
+  });
+}
 function populateAllSelects(){
   const ids = [];
   OFF_SLOTS.forEach(slot=>{
@@ -47,7 +56,15 @@ function populateAllSelects(){
   DEF_SLOTS.forEach(slot=>{
     ids.push(`home_${slot}_d1`,`home_${slot}_d2`,`away_${slot}_d1`,`away_${slot}_d2`);
   });
-  ids.forEach(fillSelect);
+  ids.forEach(fillRatingSelect);
+
+  // Coach type + rating (two each per team)
+  ["home","away"].forEach(side=>{
+    fillCoachTypeSelect(`${side}_COACH_t1`);
+    fillCoachTypeSelect(`${side}_COACH_t2`);
+    fillRatingSelect(`${side}_COACH_r1`);
+    fillRatingSelect(`${side}_COACH_r2`);
+  });
 }
 
 // --- Team config ----------------------------------------------------------
@@ -55,23 +72,29 @@ function getTeamConfig(side){
   const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
 
   const offense = OFF_SLOTS.map(slot=>{
-    const o1 = document.getElementById(`${side}_${slot}_o1`).value;
-    const o2 = document.getElementById(`${side}_${slot}_o2`).value;
-    return { slot, o1: toRating(o1), o2: toRating(o2) };
+    const o1 = toRating(document.getElementById(`${side}_${slot}_o1`).value);
+    const o2 = toRating(document.getElementById(`${side}_${slot}_o2`).value);
+    return { slot, o1, o2 };
   });
 
   const defense = DEF_SLOTS.map(slot=>{
-    const d1 = document.getElementById(`${side}_${slot}_d1`).value;
-    const d2 = document.getElementById(`${side}_${slot}_d2`).value;
-    return { slot, d1: toRating(d1), d2: toRating(d2) };
+    const d1 = toRating(document.getElementById(`${side}_${slot}_d1`).value);
+    const d2 = toRating(document.getElementById(`${side}_${slot}_d2`).value);
+    return { slot, d1, d2 };
   });
 
-  return { name, offense, defense };
+  const coach = {
+    t1: document.getElementById(`${side}_COACH_t1`).value, // "-", "OFF", "DEF"
+    r1: toRating(document.getElementById(`${side}_COACH_r1`).value),
+    t2: document.getElementById(`${side}_COACH_t2`).value,
+    r2: toRating(document.getElementById(`${side}_COACH_r2`).value),
+  };
+
+  return { name, offense, defense, coach };
 }
 
 // --- Randomize / Clear ----------------------------------------------------
-function randomPickOrDash(probDash=0.25){
-  // 25% chance to set “–”, otherwise biased to 1–3
+function randomPickOrDash(probDash){
   if (Math.random() < probDash) return "-";
   const r = Math.random();
   if (r < 0.15) return "0";
@@ -79,6 +102,13 @@ function randomPickOrDash(probDash=0.25){
   if (r < 0.80) return "1";
   if (r < 0.95) return "3";
   return "4";
+}
+function randomCoachType(){
+  const r = Math.random();
+  if (r < 0.35) return "OFF";
+  if (r < 0.70) return "DEF";
+  if (r < 0.85) return "-";
+  return "OFF"; // slight lean to having a coach die
 }
 function randomizeTeam(side){
   OFF_SLOTS.forEach(slot=>{
@@ -89,6 +119,11 @@ function randomizeTeam(side){
     document.getElementById(`${side}_${slot}_d1`).value = randomPickOrDash(0.15);
     document.getElementById(`${side}_${slot}_d2`).value = randomPickOrDash(0.40);
   });
+  // Coach
+  document.getElementById(`${side}_COACH_t1`).value = randomCoachType();
+  document.getElementById(`${side}_COACH_t2`).value = randomCoachType();
+  document.getElementById(`${side}_COACH_r1`).value = randomPickOrDash(0.20);
+  document.getElementById(`${side}_COACH_r2`).value = randomPickOrDash(0.35);
 }
 function clearTeam(side){
   OFF_SLOTS.forEach(slot=>{
@@ -99,9 +134,13 @@ function clearTeam(side){
     document.getElementById(`${side}_${slot}_d1`).value = "–";
     document.getElementById(`${side}_${slot}_d2`).value = "–";
   });
+  document.getElementById(`${side}_COACH_t1`).value = "-";
+  document.getElementById(`${side}_COACH_t2`).value = "-";
+  document.getElementById(`${side}_COACH_r1`).value = "–";
+  document.getElementById(`${side}_COACH_r2`).value = "–";
 }
 
-// --- Bulk helpers ---------------------------------------------------------
+// Bulk helpers for O2/D2 remain (coach dice are independent)
 function copyAllO2fromO1(){
   ["home","away"].forEach(side=>{
     OFF_SLOTS.forEach(slot=>{
@@ -145,27 +184,69 @@ function rollDefDie(rating){
   return { face, code };
 }
 
+// Coach processing: returns {offResults[], defResults[]}
+function rollCoach(coach){
+  const offResults = [];
+  const defResults = [];
+
+  const doOne = (which, t, r)=>{
+    if (t === "-" || r == null) return;
+    if (t === "OFF"){
+      const {face, pts} = rollOffDie(r);
+      offResults.push({slot:"Coach", which, rating:r, face, pts});
+    } else if (t === "DEF"){
+      const {face, code} = rollDefDie(r);
+      defResults.push({slot:"Coach", which, rating:r, face, code});
+    }
+  };
+
+  doOne("C1", coach.t1, coach.r1);
+  doOne("C2", coach.t2, coach.r2);
+
+  return { offResults, defResults };
+}
+
 function resolveSide(my){
-  // OFFENSE
+  // OFFENSE (players)
   const offResults = [];
   my.offense.forEach(gb=>{
-    if (gb.o1!=null) offResults.push({slot:gb.slot, which:"O1", rating:gb.o1, ...rollOffDie(gb.o1)});
-    if (gb.o2!=null) offResults.push({slot:gb.slot, which:"O2", rating:gb.o2, ...rollOffDie(gb.o2)});
+    if (gb.o1!=null){
+      const r = rollOffDie(gb.o1);
+      offResults.push({slot:gb.slot, which:"O1", rating:gb.o1, ...r});
+    }
+    if (gb.o2!=null){
+      const r = rollOffDie(gb.o2);
+      offResults.push({slot:gb.slot, which:"O2", rating:gb.o2, ...r});
+    }
   });
-  const own7 = offResults.filter(r=>r.pts===7).length;
-  const own3 = offResults.filter(r=>r.pts===3).length;
-  const ownBase = offResults.reduce((a,r)=>a+r.pts,0);
 
-  // DEFENSE
+  // DEFENSE (players)
   const defResults = [];
   my.defense.forEach(gb=>{
-    if (gb.d1!=null) defResults.push({slot:gb.slot, which:"D1", rating:gb.d1, ...rollDefDie(gb.d1)});
-    if (gb.d2!=null) defResults.push({slot:gb.slot, which:"D2", rating:gb.d2, ...rollDefDie(gb.d2)});
+    if (gb.d1!=null){
+      const r = rollDefDie(gb.d1);
+      defResults.push({slot:gb.slot, which:"D1", rating:gb.d1, ...r});
+    }
+    if (gb.d2!=null){
+      const r = rollDefDie(gb.d2);
+      defResults.push({slot:gb.slot, which:"D2", rating:gb.d2, ...r});
+    }
   });
-  const blocks = defResults.filter(r=>r.code===1).length;
-  const bonus = defResults.reduce((a,r)=>a+(r.code===7?7:(r.code===2?2:0)),0);
 
-  return { offResults, defResults, own7, own3, ownBase, blocks, bonus };
+  // COACH (adds to offense or defense buckets depending on type)
+  const coachPack = rollCoach(my.coach);
+  const offAll = offResults.concat(coachPack.offResults);
+  const defAll = defResults.concat(coachPack.defResults);
+
+  // Tally
+  const own7 = offAll.filter(r=>r.pts===7).length;
+  const own3 = offAll.filter(r=>r.pts===3).length;
+  const ownBase = offAll.reduce((a,r)=>a + r.pts, 0);
+
+  const blocks = defAll.filter(r=>r.code===1).length;
+  const bonus = defAll.reduce((a,r)=>a + (r.code===7?7:(r.code===2?2:0)), 0);
+
+  return { offResults: offAll, defResults: defAll, own7, own3, ownBase, blocks, bonus };
 }
 
 function finalizeScore(myDetail, oppDetail){
@@ -226,7 +307,7 @@ function play(){
 window.addEventListener("DOMContentLoaded", ()=>{
   populateAllSelects();
 
-  // Defaults: O1/D1 at 2, O2/D2 “–”
+  // Defaults: players O1/D1 at 2, O2/D2 “–”; Coach both “–”
   OFF_SLOTS.forEach(slot=>{
     document.getElementById(`home_${slot}_o1`).value = "2";
     document.getElementById(`home_${slot}_o2`).value = "–";
@@ -238,6 +319,12 @@ window.addEventListener("DOMContentLoaded", ()=>{
     document.getElementById(`home_${slot}_d2`).value = "–";
     document.getElementById(`away_${slot}_d1`).value = "2";
     document.getElementById(`away_${slot}_d2`).value = "–";
+  });
+  ["home","away"].forEach(side=>{
+    document.getElementById(`${side}_COACH_t1`).value = "-";
+    document.getElementById(`${side}_COACH_t2`).value = "-";
+    document.getElementById(`${side}_COACH_r1`).value = "–";
+    document.getElementById(`${side}_COACH_r2`).value = "–";
   });
 
   // Buttons
@@ -257,5 +344,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // First roll
   play();
 });
+
 
 
