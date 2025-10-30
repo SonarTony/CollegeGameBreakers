@@ -48,7 +48,7 @@ p{ margin:.25rem 0; }
 label{ color:var(--ink); }
 .pair{ display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
 select{
-  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:88px;
+  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:110px;
 }
 
 .controls{
@@ -79,14 +79,16 @@ button.primary:hover{ filter:brightness(1.05); }
 .picker{ display:flex; gap:.5rem; align-items:center; }
 .picker label{ color:var(--muted); }
 
-.league-wrap{ display:grid; grid-template-columns:310px 1fr; gap:1rem; }
+.league-wrap{ display:grid; grid-template-columns:350px 1fr; gap:1rem; }
 .league-sidebar{
   background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:.6rem; max-height:72vh; overflow:auto;
 }
-.conf-block{ margin-bottom:.6rem; }
+.conf-block{ margin-bottom:.8rem; }
 .conf-title{
   font-weight:800; color:var(--accent); padding:.4rem .5rem; border-bottom:1px dashed var(--line);
+  display:flex; align-items:center; justify-content:space-between;
 }
+.conf-title .mini{ display:flex; gap:.4rem; }
 .team-item{
   display:flex; align-items:center; justify-content:space-between; gap:.5rem;
   padding:.35rem .5rem; border-bottom:1px dashed var(--line); cursor:pointer;
@@ -105,7 +107,7 @@ button.primary:hover{ filter:brightness(1.05); }
 .editor-head .title{ display:flex; align-items:center; gap:.6rem; }
 .editor-actions button{ margin-left:.3rem; }
 
-.editor-footer{ display:flex; gap:.5rem; justify-content:flex-end; margin-top:.6rem; }
+.editor-footer{ display:flex; gap:.5rem; justify-content:flex-end; margin-top:.6rem; flex-wrap:wrap; }
 .buttonlike{ display:inline-block; padding:.6rem .9rem; border:1px solid var(--line); border-radius:10px; cursor:pointer; }
 
 .importer input + span{ user-select:none; }
@@ -116,6 +118,7 @@ button.primary:hover{ filter:brightness(1.05); }
   .play-loader{ grid-template-columns:1fr; }
   .league-wrap{ grid-template-columns:1fr; }
 }
+
 
 
 

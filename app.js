@@ -1,6 +1,7 @@
 // Gamebreakers College Football — League Manager + Play
 // Two dice per player (0–4 or "–"). Coach: two dice; Off/Def/–.
 // Defense slots: DL, LB, DB (no FLEX).
+// Now includes: seeded conferences, tiered randomization, and per-conference randomize buttons.
 
 // ---------- Core tables ----------
 const OFF_TABLE = {
@@ -21,11 +22,17 @@ const OFF_SLOTS = ["QB","RB","WR","OL"];
 const DEF_SLOTS = ["DL","LB","DB"];
 
 // ---------- Utilities ----------
-const LS_KEY = "GBCF_LEAGUE_V1";
+const LS_KEY = "GBCF_LEAGUE_V2";
 function d6(){ return 1 + Math.floor(Math.random()*6); }
 function isDash(v){ return v === "-" || v === "–" || v === "" || v == null; }
 function toRating(v){ return isDash(v) ? null : Math.max(0, Math.min(4, v|0)); }
 function fromRating(r){ return (r==null?"-":String(r)); }
+function pickWeighted(weights){
+  const total = weights.reduce((a,x)=>a+x.w,0);
+  let r = Math.random()*total;
+  for(const x of weights){ if((r-=x.w)<=0) return x.v; }
+  return weights[weights.length-1].v;
+}
 
 function fillRatingSelect(sel){
   sel.innerHTML = "";
@@ -40,7 +47,7 @@ function fillCoachTypeSelect(sel){
   });
 }
 
-// ---------- League data ----------
+// ---------- Team / League structures ----------
 function defaultTeam(name){
   return {
     name,
@@ -53,27 +60,122 @@ function defaultTeam(name){
     coach:{ t1:"-", r1:null, t2:"-", r2:null }
   };
 }
-function defaultLeague(){
-  const confNames = ["Atlantic","Midwest","South","Pacific","Mountain","Northeast"];
-  const league = confNames.map((cName, ci)=>{
-    const teams = [];
-    for(let i=1;i<=12;i++){
-      teams.push(defaultTeam(`${cName} ${i}`));
-    }
-    return { name:cName, teams };
-  });
-  return league;
+
+// --- Seeding: names + tiers ---
+const CONFERENCES = [
+  { name: "Atlantic Premier",  tier: 1, teams: [
+    "Coastal State Mariners","Bayview Tech Hawks","New Harbor University","Carolina Metro College",
+    "Old Dominion Ridge","Tri-County Institute","Rivergate University","Greenwood State",
+    "Capital City College","Lowland A&M","Summit Shoreline","Seaboard University"
+  ]},
+  { name: "Pacific Elite",     tier: 1, teams: [
+    "Pacific Northern","Golden Bay University","Redwood State","Inland Empire Tech",
+    "Sierra Vista College","Harborline Institute","Cascade Metropolitan","Silver Coast",
+    "Sunset Valley","Westcrest University","Canyon Ridge","Monterey Plains"
+  ]},
+  { name: "Heartland",         tier: 2, teams: [
+    "Prairie State","Great Plains Tech","Mid-River University","Twin Forks College",
+    "Frontier A&M","Bluegrass Institute","Cedar Valley","Northern Prairie",
+    "Iron Range College","Crossroads University","Wabash River","Gateway State"
+  ]},
+  { name: "Southern",          tier: 2, teams: [
+    "Gulfshore University","Magnolia State","Pinebelt College","Lowcountry Tech",
+    "Bayou Plains","Blue Delta","Savannah Ridge","Oakcrest University",
+    "Peachtree State","Sunrise Coast","Riverbend College","Crescent City"
+  ]},
+  { name: "Mountain Valley",   tier: 3, teams: [
+    "High Mesa College","Timberline State","Basin & Range","Great Divide Tech",
+    "Arrowhead University","Dry Creek A&M","Painted Desert","Silver Basin",
+    "Bighorn College","Sagebrush State","Clearwater Institute","Yellow Rock"
+  ]},
+  { name: "Northeastern",      tier: 3, teams: [
+    "Commonwealth Tech","Hudson Valley","Maritime & Mechanical","Patriot State",
+    "Granite Ridge","Seacoast University","Maplewood College","Pioneer Institute",
+    "Harbor City State","Blackstone College","Mohawk River","Pine Grove University"
+  ]}
+];
+
+// --- Tiered randomization profiles ---
+const TIER_PROFILES = {
+  1: { // Top
+    o2_present_p: 0.55, d2_present_p: 0.55,
+    ratingWeights: [
+      {v:0,w:5},{v:1,w:15},{v:2,w:40},{v:3,w:28},{v:4,w:12}
+    ],
+    coachTypeWeights: [{v:"OFF",w:40},{v:"DEF",w:40},{v:"-",w:20}],
+    coachRatingWeights: [{v:0,w:6},{v:1,w:18},{v:2,w:40},{v:3,w:26},{v:4,w:10}]
+  },
+  2: { // Middle
+    o2_present_p: 0.40, d2_present_p: 0.40,
+    ratingWeights: [
+      {v:0,w:10},{v:1,w:25},{v:2,w:40},{v:3,w:20},{v:4,w:5}
+    ],
+    coachTypeWeights: [{v:"OFF",w:35},{v:"DEF",w:35},{v:"-",w:30}],
+    coachRatingWeights: [{v:0,w:12},{v:1,w:28},{v:2,w:38},{v:3,w:18},{v:4,w:4}]
+  },
+  3: { // Bottom
+    o2_present_p: 0.20, d2_present_p: 0.20,
+    ratingWeights: [
+      {v:0,w:20},{v:1,w:35},{v:2,w:35},{v:3,w:9},{v:4,w:1}
+    ],
+    coachTypeWeights: [{v:"OFF",w:28},{v:"DEF",w:28},{v:"-",w:44}],
+    coachRatingWeights: [{v:0,w:22},{v:1,w:40},{v:2,w:28},{v:3,w:8},{v:4,w:2}]
+  }
+};
+
+function randomDieByProfile(profile, present_p){
+  if (Math.random() > present_p) return null; // “–”
+  return pickWeighted(profile.ratingWeights);
 }
+function randomCoachByProfile(profile){
+  const t1 = pickWeighted(profile.coachTypeWeights);
+  const t2 = pickWeighted(profile.coachTypeWeights);
+  const r1 = (t1 === "-") ? null : pickWeighted(profile.coachRatingWeights);
+  const r2 = (t2 === "-") ? null : pickWeighted(profile.coachRatingWeights);
+  return { t1, r1, t2, r2 };
+}
+function randomTeamByTier(name, tier){
+  const p = TIER_PROFILES[tier];
+  const team = defaultTeam(name);
+
+  // Offense
+  OFF_SLOTS.forEach(s=>{
+    team.offense[s].o1 = pickWeighted(p.ratingWeights);
+    team.offense[s].o2 = randomDieByProfile(p, p.o2_present_p);
+  });
+
+  // Defense
+  DEF_SLOTS.forEach(s=>{
+    team.defense[s].d1 = pickWeighted(p.ratingWeights);
+    team.defense[s].d2 = randomDieByProfile(p, p.d2_present_p);
+  });
+
+  // Coach
+  team.coach = randomCoachByProfile(p);
+  return team;
+}
+
+function defaultLeague(){
+  return CONFERENCES.map(conf=>{
+    const teams = conf.teams.map(name => randomTeamByTier(name, conf.tier));
+    return { name: conf.name, tier: conf.tier, teams };
+  });
+}
+
 function loadLeague(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw){ const def = defaultLeague(); localStorage.setItem(LS_KEY, JSON.stringify(def)); return def; }
+    if(!raw){
+      const seeded = defaultLeague();
+      localStorage.setItem(LS_KEY, JSON.stringify(seeded));
+      return seeded;
+    }
     return JSON.parse(raw);
   }catch(e){
     console.warn("League load error; using defaults", e);
-    const def = defaultLeague();
-    localStorage.setItem(LS_KEY, JSON.stringify(def));
-    return def;
+    const seeded = defaultLeague();
+    localStorage.setItem(LS_KEY, JSON.stringify(seeded));
+    return seeded;
   }
 }
 function saveLeague(league){ localStorage.setItem(LS_KEY, JSON.stringify(league)); }
@@ -105,10 +207,7 @@ function fillAllPlaySelects(){
   DEF_SLOTS.forEach(s=>{
     ids.push(`home_${s}_d1`,`home_${s}_d2`,`away_${s}_d1`,`away_${s}_d2`);
   });
-  ids.forEach(id=>{
-    const el = document.getElementById(id);
-    fillRatingSelect(el);
-  });
+  ids.forEach(id=> fillRatingSelect(document.getElementById(id)));
   ["home_COACH_r1","home_COACH_r2","away_COACH_r1","away_COACH_r2"].forEach(id=>{
     fillRatingSelect(document.getElementById(id));
   });
@@ -231,10 +330,7 @@ function applyTeamToSide(team, side){
 
 // Populate the pickers with all league teams
 function refreshTeamPickers(){
-  const lists = [
-    document.getElementById("pickHomeTeam"),
-    document.getElementById("pickAwayTeam")
-  ];
+  const lists = [document.getElementById("pickHomeTeam"), document.getElementById("pickAwayTeam")];
   lists.forEach(sel=>{
     sel.innerHTML = "";
     LEAGUE.forEach((conf, ci)=>{
@@ -372,7 +468,17 @@ function renderLeagueSidebar(){
     block.className = "conf-block";
     const title = document.createElement("div");
     title.className = "conf-title";
-    title.textContent = conf.name;
+    title.innerHTML = `<span>${conf.name} <small>(Tier ${conf.tier})</small></span>`;
+    const mini = document.createElement("div");
+    mini.className = "mini";
+    const btnRnd = document.createElement("button");
+    btnRnd.className = "ghost";
+    btnRnd.textContent = "🎲 Randomize Conference";
+    btnRnd.addEventListener("click", ()=>{
+      randomizeConference(ci);
+    });
+    mini.appendChild(btnRnd);
+    title.appendChild(mini);
     block.appendChild(title);
 
     conf.teams.forEach((t, ti)=>{
@@ -394,6 +500,18 @@ function renderLeagueSidebar(){
   });
 }
 
+function randomizeConference(ci){
+  const conf = LEAGUE[ci];
+  const tier = conf.tier || 3;
+  conf.teams = conf.teams.map(t => randomTeamByTier(t.name, tier));
+  saveLeague(LEAGUE);
+  renderLeagueSidebar();
+  refreshTeamPickers();
+  if(selectedCI===ci && selectedTI!=null){
+    loadTeamIntoEditor(conf.teams[selectedTI]);
+  }
+}
+
 function editorSelectIds(){
   const ids = [];
   OFF_SLOTS.forEach(s=>{ ids.push(`edit_${s}_o1`,`edit_${s}_o2`); });
@@ -413,8 +531,7 @@ function clearEditorSelection(){
   document.getElementById("editTeamName").value = "";
   editorSelectIds().forEach(id=>{
     const el = document.getElementById(id);
-    if (id.includes("_t")) el.value = "-";
-    else el.value = "-";
+    el.value = id.includes("_t") ? "-" : "-";
   });
 }
 function loadTeamIntoEditor(team){
@@ -491,16 +608,14 @@ window.addEventListener("DOMContentLoaded", ()=>{
     if(!sel) return;
     const team = collectSide("home");
     setTeamByIndexStr(sel, team);
-    renderLeagueSidebar(); // update names if changed
-    refreshTeamPickers();
+    renderLeagueSidebar(); refreshTeamPickers();
   });
   document.getElementById("btnSaveAwayBack").addEventListener("click", ()=>{
     const sel = document.getElementById("pickAwayTeam").value;
     if(!sel) return;
     const team = collectSide("away");
     setTeamByIndexStr(sel, team);
-    renderLeagueSidebar();
-    refreshTeamPickers();
+    renderLeagueSidebar(); refreshTeamPickers();
   });
 
   // LEAGUE setup
@@ -511,8 +626,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // Editor buttons
   document.getElementById("editRandom").addEventListener("click", ()=>{
     if(selectedCI==null) return;
-    const side = "edit"; // reuse helpers
-    // quick randomize in editor
     OFF_SLOTS.forEach(s=>{
       document.getElementById(`edit_${s}_o1`).value = randomPickOrDash(0.15);
       document.getElementById(`edit_${s}_o2`).value = randomPickOrDash(0.40);
@@ -549,12 +662,11 @@ window.addEventListener("DOMContentLoaded", ()=>{
     const updated = collectEditorToTeam(base);
     LEAGUE[selectedCI].teams[selectedTI] = updated;
     saveLeague(LEAGUE);
-    renderLeagueSidebar();
-    refreshTeamPickers();
-    loadTeamIntoEditor(updated); // reflect normalized values
+    renderLeagueSidebar(); refreshTeamPickers();
+    loadTeamIntoEditor(updated);
   });
 
-  // Export / Import / Reset
+  // Export / Import / Reset / Randomize All
   document.getElementById("exportLeague").addEventListener("click", ()=>{
     const blob = new Blob([JSON.stringify(LEAGUE, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
@@ -566,7 +678,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
     const txt = await f.text();
     try{
       const data = JSON.parse(txt);
-      // naive validation
       if (!Array.isArray(data) || data.length!==6) throw new Error("Invalid league file.");
       LEAGUE = data;
       saveLeague(LEAGUE);
@@ -578,15 +689,20 @@ window.addEventListener("DOMContentLoaded", ()=>{
     }
   });
   document.getElementById("resetLeague").addEventListener("click", ()=>{
-    if(!confirm("Reset league to defaults? This overwrites all saved teams.")) return;
+    if(!confirm("Reset league to default seeded teams? This overwrites all saved teams.")) return;
     LEAGUE = defaultLeague();
     saveLeague(LEAGUE);
     renderLeagueSidebar(); refreshTeamPickers(); clearEditorSelection();
   });
+  document.getElementById("randomizeAll").addEventListener("click", ()=>{
+    if(!confirm("Randomize all conferences by tier? This overwrites all rosters but keeps team names.")) return;
+    LEAGUE.forEach((conf, ci)=>{ randomizeConference(ci); });
+  });
 
-  // First visible roll result
+  // First visible roll
   playOne();
 });
+
 
 
 
