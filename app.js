@@ -1,5 +1,6 @@
 // Gamebreakers College Football — Two dice per player (0–4 or “–” to skip).
 // Coach: two dice; each can be Off, Def, or “–”.
+// FLEX position removed from defense.
 
 // --- Tables ---------------------------------------------------------------
 const OFF_TABLE = {
@@ -18,7 +19,7 @@ const DEF_TABLE = {
 };
 
 const OFF_SLOTS = ["QB","RB","WR","OL"];
-const DEF_SLOTS = ["DL","LB","DB","FLEX"];
+const DEF_SLOTS = ["DL","LB","DB"]; // FLEX removed
 
 // --- Utilities ------------------------------------------------------------
 function d6(){ return 1 + Math.floor(Math.random()*6); }
@@ -108,7 +109,7 @@ function randomCoachType(){
   if (r < 0.35) return "OFF";
   if (r < 0.70) return "DEF";
   if (r < 0.85) return "-";
-  return "OFF"; // slight lean to having a coach die
+  return "OFF";
 }
 function randomizeTeam(side){
   OFF_SLOTS.forEach(slot=>{
@@ -140,7 +141,7 @@ function clearTeam(side){
   document.getElementById(`${side}_COACH_r2`).value = "–";
 }
 
-// Bulk helpers for O2/D2 remain (coach dice are independent)
+// Bulk helpers for O2/D2 (coach dice are independent)
 function copyAllO2fromO1(){
   ["home","away"].forEach(side=>{
     OFF_SLOTS.forEach(slot=>{
@@ -188,7 +189,6 @@ function rollDefDie(rating){
 function rollCoach(coach){
   const offResults = [];
   const defResults = [];
-
   const doOne = (which, t, r)=>{
     if (t === "-" || r == null) return;
     if (t === "OFF"){
@@ -199,10 +199,8 @@ function rollCoach(coach){
       defResults.push({slot:"Coach", which, rating:r, face, code});
     }
   };
-
   doOne("C1", coach.t1, coach.r1);
   doOne("C2", coach.t2, coach.r2);
-
   return { offResults, defResults };
 }
 
@@ -210,30 +208,18 @@ function resolveSide(my){
   // OFFENSE (players)
   const offResults = [];
   my.offense.forEach(gb=>{
-    if (gb.o1!=null){
-      const r = rollOffDie(gb.o1);
-      offResults.push({slot:gb.slot, which:"O1", rating:gb.o1, ...r});
-    }
-    if (gb.o2!=null){
-      const r = rollOffDie(gb.o2);
-      offResults.push({slot:gb.slot, which:"O2", rating:gb.o2, ...r});
-    }
+    if (gb.o1!=null){ const r = rollOffDie(gb.o1); offResults.push({slot:gb.slot, which:"O1", rating:gb.o1, ...r}); }
+    if (gb.o2!=null){ const r = rollOffDie(gb.o2); offResults.push({slot:gb.slot, which:"O2", rating:gb.o2, ...r}); }
   });
 
   // DEFENSE (players)
   const defResults = [];
   my.defense.forEach(gb=>{
-    if (gb.d1!=null){
-      const r = rollDefDie(gb.d1);
-      defResults.push({slot:gb.slot, which:"D1", rating:gb.d1, ...r});
-    }
-    if (gb.d2!=null){
-      const r = rollDefDie(gb.d2);
-      defResults.push({slot:gb.slot, which:"D2", rating:gb.d2, ...r});
-    }
+    if (gb.d1!=null){ const r = rollDefDie(gb.d1); defResults.push({slot:gb.slot, which:"D1", rating:gb.d1, ...r}); }
+    if (gb.d2!=null){ const r = rollDefDie(gb.d2); defResults.push({slot:gb.slot, which:"D2", rating:gb.d2, ...r}); }
   });
 
-  // COACH (adds to offense or defense buckets depending on type)
+  // COACH
   const coachPack = rollCoach(my.coach);
   const offAll = offResults.concat(coachPack.offResults);
   const defAll = defResults.concat(coachPack.defResults);
@@ -344,6 +330,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // First roll
   play();
 });
+
 
 
 
