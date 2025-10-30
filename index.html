@@ -1,209 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gamebreakers College Football</title>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <header class="app-header">
-    <h1>Gamebreakers College Football</h1>
-    <p class="tagline">Roll all GB dice at once • Blocks cancel 7s then 3s • Defense 7/2 adds to own total</p>
-  </header>
+<header class="app-header">
+  <h1>Gamebreakers College Football</h1>
+  <p class="tagline">Up to two dice per GB slot • Defense blocks cancel 7s then 3s • Defense 7/2 adds to own total</p>
+</header>
 
-  <main class="container">
-    <section class="teams">
-      <div class="team-card" id="homeTeamCard">
-        <div class="team-head">
-          <input id="homeName" class="team-name" value="Home" aria-label="Home Team Name"/>
-          <div class="team-actions">
-            <button class="ghost" id="homeRandom">Randomize</button>
-            <button class="ghost" id="homeClear">Clear</button>
-          </div>
-        </div>
-
-        <div class="gb-grid">
-          <h3>Offense</h3>
-          <div class="row">
-            <label>QB (O:D)</label>
-            <div class="pair">
-              <select id="home_QB_o" aria-label="Home QB Offense"></select>
-              <span>:</span>
-              <select id="home_QB_d" aria-label="Home QB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>RB (O:D)</label>
-            <div class="pair">
-              <select id="home_RB_o" aria-label="Home RB Offense"></select>
-              <span>:</span>
-              <select id="home_RB_d" aria-label="Home RB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>WR (O:D)</label>
-            <div class="pair">
-              <select id="home_WR_o" aria-label="Home WR Offense"></select>
-              <span>:</span>
-              <select id="home_WR_d" aria-label="Home WR Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>OL (O:D)</label>
-            <div class="pair">
-              <select id="home_OL_o" aria-label="Home OL Offense"></select>
-              <span>:</span>
-              <select id="home_OL_d" aria-label="Home OL Defense"></select>
-            </div>
-          </div>
-
-          <h3>Defense</h3>
-          <div class="row">
-            <label>DL (O:D)</label>
-            <div class="pair">
-              <select id="home_DL_o" aria-label="Home DL Offense"></select>
-              <span>:</span>
-              <select id="home_DL_d" aria-label="Home DL Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>LB (O:D)</label>
-            <div class="pair">
-              <select id="home_LB_o" aria-label="Home LB Offense"></select>
-              <span>:</span>
-              <select id="home_LB_d" aria-label="Home LB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>DB (O:D)</label>
-            <div class="pair">
-              <select id="home_DB_o" aria-label="Home DB Offense"></select>
-              <span>:</span>
-              <select id="home_DB_d" aria-label="Home DB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>Flex (DL/LB/DB) (O:D)</label>
-            <div class="pair">
-              <select id="home_FLEX_o" aria-label="Home Flex Offense"></select>
-              <span>:</span>
-              <select id="home_FLEX_d" aria-label="Home Flex Defense"></select>
-            </div>
-          </div>
+<main class="container">
+  <section class="teams">
+    <!-- HOME -->
+    <div class="team-card" id="homeTeamCard">
+      <div class="team-head">
+        <input id="homeName" class="team-name" value="Home" aria-label="Home Team Name"/>
+        <div class="team-actions">
+          <button class="ghost" id="homeRandom">Randomize</button>
+          <button class="ghost" id="homeClear">Clear</button>
         </div>
       </div>
 
-      <div class="vs">vs</div>
-
-      <div class="team-card" id="awayTeamCard">
-        <div class="team-head">
-          <input id="awayName" class="team-name" value="Away" aria-label="Away Team Name"/>
-          <div class="team-actions">
-            <button class="ghost" id="awayRandom">Randomize</button>
-            <button class="ghost" id="awayClear">Clear</button>
+      <div class="gb-grid">
+        <h3>Offense</h3>
+        <!-- Offense rows (O:D + second-die toggles) -->
+        <div class="row">
+          <label>QB (O:D)</label>
+          <div class="pair">
+            <select id="home_QB_o"></select><span>:</span><select id="home_QB_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_QB_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>RB (O:D)</label>
+          <div class="pair">
+            <select id="home_RB_o"></select><span>:</span><select id="home_RB_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_RB_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>WR (O:D)</label>
+          <div class="pair">
+            <select id="home_WR_o"></select><span>:</span><select id="home_WR_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_WR_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>OL (O:D)</label>
+          <div class="pair">
+            <select id="home_OL_o"></select><span>:</span><select id="home_OL_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_OL_o2"/> +Off die 2</label>
           </div>
         </div>
 
-        <div class="gb-grid">
-          <h3>Offense</h3>
-          <div class="row">
-            <label>QB (O:D)</label>
-            <div class="pair">
-              <select id="away_QB_o" aria-label="Away QB Offense"></select>
-              <span>:</span>
-              <select id="away_QB_d" aria-label="Away QB Defense"></select>
-            </div>
+        <h3>Defense</h3>
+        <!-- Defense rows (O:D + second-die toggles) -->
+        <div class="row">
+          <label>DL (O:D)</label>
+          <div class="pair">
+            <select id="home_DL_o"></select><span>:</span><select id="home_DL_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_DL_d2"/> +Def die 2</label>
           </div>
-          <div class="row">
-            <label>RB (O:D)</label>
-            <div class="pair">
-              <select id="away_RB_o" aria-label="Away RB Offense"></select>
-              <span>:</span>
-              <select id="away_RB_d" aria-label="Away RB Defense"></select>
-            </div>
+        </div>
+        <div class="row">
+          <label>LB (O:D)</label>
+          <div class="pair">
+            <select id="home_LB_o"></select><span>:</span><select id="home_LB_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_LB_d2"/> +Def die 2</label>
           </div>
-          <div class="row">
-            <label>WR (O:D)</label>
-            <div class="pair">
-              <select id="away_WR_o" aria-label="Away WR Offense"></select>
-              <span>:</span>
-              <select id="away_WR_d" aria-label="Away WR Defense"></select>
-            </div>
+        </div>
+        <div class="row">
+          <label>DB (O:D)</label>
+          <div class="pair">
+            <select id="home_DB_o"></select><span>:</span><select id="home_DB_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_DB_d2"/> +Def die 2</label>
           </div>
-          <div class="row">
-            <label>OL (O:D)</label>
-            <div class="pair">
-              <select id="away_OL_o" aria-label="Away OL Offense"></select>
-              <span>:</span>
-              <select id="away_OL_d" aria-label="Away OL Defense"></select>
-            </div>
-          </div>
-
-          <h3>Defense</h3>
-          <div class="row">
-            <label>DL (O:D)</label>
-            <div class="pair">
-              <select id="away_DL_o" aria-label="Away DL Offense"></select>
-              <span>:</span>
-              <select id="away_DL_d" aria-label="Away DL Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>LB (O:D)</label>
-            <div class="pair">
-              <select id="away_LB_o" aria-label="Away LB Offense"></select>
-              <span>:</span>
-              <select id="away_LB_d" aria-label="Away LB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>DB (O:D)</label>
-            <div class="pair">
-              <select id="away_DB_o" aria-label="Away DB Offense"></select>
-              <span>:</span>
-              <select id="away_DB_d" aria-label="Away DB Defense"></select>
-            </div>
-          </div>
-          <div class="row">
-            <label>Flex (DL/LB/DB) (O:D)</label>
-            <div class="pair">
-              <select id="away_FLEX_o" aria-label="Away Flex Offense"></select>
-              <span>:</span>
-              <select id="away_FLEX_d" aria-label="Away Flex Defense"></select>
-            </div>
+        </div>
+        <div class="row">
+          <label>Flex (DL/LB/DB) (O:D)</label>
+          <div class="pair">
+            <select id="home_FLEX_o"></select><span>:</span><select id="home_FLEX_d"></select>
+            <label class="toggle"><input type="checkbox" id="home_FLEX_d2"/> +Def die 2</label>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section class="controls">
-      <button id="rollAll" class="primary">Roll Game</button>
-      <button id="rerollHome" class="ghost">Re-roll Home Only</button>
-      <button id="rerollAway" class="ghost">Re-roll Away Only</button>
-      <button id="bothRandom" class="ghost">Randomize Both Teams</button>
-    </section>
+    <div class="vs">vs</div>
 
-    <section class="scoreboard">
-      <div class="score-card">
-        <h2 id="homeLabel">Home</h2>
-        <div class="score" id="homeScore">0</div>
-        <div class="detail" id="homeDetail"></div>
+    <!-- AWAY -->
+    <div class="team-card" id="awayTeamCard">
+      <div class="team-head">
+        <input id="awayName" class="team-name" value="Away" aria-label="Away Team Name"/>
+        <div class="team-actions">
+          <button class="ghost" id="awayRandom">Randomize</button>
+          <button class="ghost" id="awayClear">Clear</button>
+        </div>
       </div>
-      <div class="score-card">
-        <h2 id="awayLabel">Away</h2>
-        <div class="score" id="awayScore">0</div>
-        <div class="detail" id="awayDetail"></div>
+
+      <div class="gb-grid">
+        <h3>Offense</h3>
+        <div class="row">
+          <label>QB (O:D)</label>
+          <div class="pair">
+            <select id="away_QB_o"></select><span>:</span><select id="away_QB_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_QB_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>RB (O:D)</label>
+          <div class="pair">
+            <select id="away_RB_o"></select><span>:</span><select id="away_RB_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_RB_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>WR (O:D)</label>
+          <div class="pair">
+            <select id="away_WR_o"></select><span>:</span><select id="away_WR_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_WR_o2"/> +Off die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>OL (O:D)</label>
+          <div class="pair">
+            <select id="away_OL_o"></select><span>:</span><select id="away_OL_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_OL_o2"/> +Off die 2</label>
+          </div>
+        </div>
+
+        <h3>Defense</h3>
+        <div class="row">
+          <label>DL (O:D)</label>
+          <div class="pair">
+            <select id="away_DL_o"></select><span>:</span><select id="away_DL_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_DL_d2"/> +Def die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>LB (O:D)</label>
+          <div class="pair">
+            <select id="away_LB_o"></select><span>:</span><select id="away_LB_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_LB_d2"/> +Def die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>DB (O:D)</label>
+          <div class="pair">
+            <select id="away_DB_o"></select><span>:</span><select id="away_DB_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_DB_d2"/> +Def die 2</label>
+          </div>
+        </div>
+        <div class="row">
+          <label>Flex (DL/LB/DB) (O:D)</label>
+          <div class="pair">
+            <select id="away_FLEX_o"></select><span>:</span><select id="away_FLEX_d"></select>
+            <label class="toggle"><input type="checkbox" id="away_FLEX_d2"/> +Def die 2</label>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="log" id="log"></section>
-  </main>
+  <section class="controls">
+    <button id="rollAll" class="primary">Roll Game</button>
+    <button id="bothRandom" class="ghost">Randomize Both Teams</button>
+  </section>
 
-  <footer class="app-footer">
-    <small>Gamebreakers College Football — browser edition</small>
-  </footer>
+  <section class="scoreboard">
+    <div class="score-card">
+      <h2 id="homeLabel">Home</h2>
+      <div class="score" id="homeScore">0</div>
+      <div class="detail" id="homeDetail"></div>
+    </div>
+    <div class="score-card">
+      <h2 id="awayLabel">Away</h2>
+      <div class="score" id="awayScore">0</div>
+      <div class="detail" id="awayDetail"></div>
+    </div>
+  </section>
 
-  <script src="app.js"></script>
+  <section class="log" id="log"></section>
+</main>
+
+<footer class="app-footer">
+  <small>Gamebreakers College Football — browser edition</small>
+</footer>
+
+<script src="app.js"></script>
 </body>
 </html>

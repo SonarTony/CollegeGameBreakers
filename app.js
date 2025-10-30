@@ -1,4 +1,5 @@
-// Gamebreakers College Football — Browser Edition (HTML/CSS/JS only)
+// Gamebreakers College Football — Browser Edition
+// Up to two dice per GB slot (separately for offense and defense)
 
 // ---- Tables ---------------------------------------------------------------
 // Offense mapping: rating -> points by d6 face [1..6]
@@ -22,14 +23,12 @@ const DEF_TABLE = {
   4: [1,1,1,1,0,0]
 };
 
-// Positions (eight GB slots per team)
 const OFF_SLOTS = ["QB","RB","WR","OL"];
 const DEF_SLOTS = ["DL","LB","DB","FLEX"];
 
-// Build 0..4 options for each <select>
+// ---- UI helpers -----------------------------------------------------------
 function populateRatingSelects(){
-  const allSelects = document.querySelectorAll("select");
-  allSelects.forEach(sel=>{
+  document.querySelectorAll("select").forEach(sel=>{
     sel.innerHTML = "";
     for(let v=0; v<=4; v++){
       const opt = document.createElement("option");
@@ -39,172 +38,203 @@ function populateRatingSelects(){
     }
   });
 }
+function clamp0to4(v){ return Math.max(0, Math.min(4, v|0)); }
+function d6(){ return 1 + Math.floor(Math.random()*6); }
 
-// Helpers to fetch team config from UI
-function getTeamConfig(side){ // side: 'home' | 'away'
+function getTeamConfig(side){
   const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
+
   const offense = OFF_SLOTS.map(slot=>{
-    const o = parseInt(document.getElementById(`${side}_${slot}_o`).value,10);
-    const d = parseInt(document.getElementById(`${side}_${slot}_d`).value,10);
-    return {slot, o, d};
+    return {
+      slot,
+      o: clamp0to4(parseInt(document.getElementById(`${side}_${slot}_o`).value,10)),
+      d: clamp0to4(parseInt(document.getElementById(`${side}_${slot}_d`).value,10)),
+      offDie2: !!document.getElementById(`${side}_${slot}_o2`).checked // second OFF die?
+    };
   });
+
   const defense = DEF_SLOTS.map(slot=>{
-    const o = parseInt(document.getElementById(`${side}_${slot}_o`).value,10);
-    const d = parseInt(document.getElementById(`${side}_${slot}_d`).value,10);
-    return {slot, o, d};
+    return {
+      slot,
+      o: clamp0to4(parseInt(document.getElementById(`${side}_${slot}_o`).value,10)),
+      d: clamp0to4(parseInt(document.getElementById(`${side}_${slot}_d`).value,10)),
+      defDie2: !!document.getElementById(`${side}_${slot}_d2`).checked // second DEF die?
+    };
   });
+
   return { name, offense, defense };
 }
 
-// Randomize a team's ratings with a mild bias (offense slightly higher)
 function randomizeTeam(side){
-  const bias = (slot, isOff) => {
-    // Slightly favor 1..3; occasionally 4; rarely 0
+  // Bias: mainly 1-3; occasional 0/4
+  const pick = ()=> {
     const r = Math.random();
-    if (r < 0.05) return 0;
-    if (r < 0.55) return 2; // most common
-    if (r < 0.80) return 1;
-    if (r < 0.95) return 3;
+    if (r < 0.07) return 0;
+    if (r < 0.25) return 1;
+    if (r < 0.75) return 2;
+    if (r < 0.93) return 3;
     return 4;
   };
+
   [...OFF_SLOTS, ...DEF_SLOTS].forEach(slot=>{
-    const oSel = document.getElementById(`${side}_${slot}_o`);
-    const dSel = document.getElementById(`${side}_${slot}_d`);
-    oSel.value = String(bias(slot, true));
-    dSel.value = String(bias(slot, false));
+    document.getElementById(`${side}_${slot}_o`).value = String(pick());
+    document.getElementById(`${side}_${slot}_d`).value = String(pick());
+  });
+
+  // Randomly enable some second dice (about 30% chance each)
+  [...OFF_SLOTS].forEach(slot=>{
+    document.getElementById(`${side}_${slot}_o2`).checked = (Math.random()<0.3);
+  });
+  [...DEF_SLOTS].forEach(slot=>{
+    document.getElementById(`${side}_${slot}_d2`).checked = (Math.random()<0.3);
   });
 }
 
-// Clear a team's ratings to 0:0
 function clearTeam(side){
   [...OFF_SLOTS, ...DEF_SLOTS].forEach(slot=>{
     document.getElementById(`${side}_${slot}_o`).value = "0";
     document.getElementById(`${side}_${slot}_d`).value = "0";
   });
+  [...OFF_SLOTS].forEach(slot=>{
+    document.getElementById(`${side}_${slot}_o2`).checked = false;
+  });
+  [...DEF_SLOTS].forEach(slot=>{
+    document.getElementById(`${side}_${slot}_d2`).checked = false;
+  });
 }
 
-// Roll a d6
-function d6(){ return 1 + Math.floor(Math.random()*6); }
-
-// Calculate one side’s score details based on its GB slots and the opponent defense
-function resolveSide(my, opp){
-  // my: {offense:[{slot,o,d}], defense:[{slot,o,d}]}
-  // Step 1: roll offense dice for my 4 offense slots
-  const offRolls = my.offense.map(gb => {
-    const face = d6();
-    const rating = clamp0to4(gb.o);
-    const pts = OFF_TABLE[rating][face-1];
-    return {slot:gb.slot, face, rating, pts};
-  });
-
-  // Step 2: roll defense dice for my 4 defense slots (this affects opp’s scoring; but bonuses add to my own)
-  const defRolls = my.defense.map(gb => {
-    const face = d6();
-    const rating = clamp0to4(gb.d);
-    const code = DEF_TABLE[rating][face-1]; // 1=block, 7=+7, 2=+2, 0=none
-    return {slot:gb.slot, face, rating, code};
-  });
-
-  // Tally own offense before blocks
-  let own7 = offRolls.filter(r=>r.pts===7).length;
-  let own3 = offRolls.filter(r=>r.pts===3).length;
-  let ownBase = offRolls.reduce((a,r)=>a + r.pts, 0);
-
-  // Tally defense: blocks and bonus
-  let blocks = defRolls.filter(r=>r.code===1).length;
-  let bonus = defRolls.reduce((a,r)=> a + (r.code===7?7: r.code===2?2:0), 0);
-
-  return {offRolls, defRolls, own7, own3, ownBase, blocks, bonus};
+// ---- Resolution -----------------------------------------------------------
+function rollOffDiceForSlot(rating, count){
+  const faces = [];
+  const pts = [];
+  for(let i=0;i<count;i++){
+    const f = d6();
+    faces.push(f);
+    pts.push( OFF_TABLE[rating][f-1] );
+  }
+  return {faces, pts}; // pts are 0/3/7
 }
 
-// Apply opponent blocks to my offense (7s first, then 3s), then add my defense bonus
+function rollDefDiceForSlot(rating, count){
+  const faces = [];
+  const codes = [];
+  for(let i=0;i<count;i++){
+    const f = d6();
+    faces.push(f);
+    codes.push( DEF_TABLE[rating][f-1] ); // 1,7,2,0
+  }
+  return {faces, codes};
+}
+
+// Calculate one side’s raw details
+function resolveSide(my){
+  // Offense: each OFF slot has 1 die + optional second
+  const offResults = my.offense.map(gb=>{
+    const n = 1 + (gb.offDie2 ? 1 : 0);
+    const {faces, pts} = rollOffDiceForSlot(gb.o, n);
+    return {slot: gb.slot, rating: gb.o, faces, pts};
+  });
+
+  // Defense: each DEF slot has 1 die + optional second
+  const defResults = my.defense.map(gb=>{
+    const n = 1 + (gb.defDie2 ? 1 : 0);
+    const {faces, codes} = rollDefDiceForSlot(gb.d, n);
+    return {slot: gb.slot, rating: gb.d, faces, codes};
+  });
+
+  // Tally offense 7s & 3s and base
+  const offFlatPts = offResults.flatMap(r => r.pts);
+  const own7 = offFlatPts.filter(v=>v===7).length;
+  const own3 = offFlatPts.filter(v=>v===3).length;
+  const ownBase = offFlatPts.reduce((a,v)=>a+v,0);
+
+  // Tally defense: blocks + bonus (7/2)
+  const defFlatCodes = defResults.flatMap(r => r.codes);
+  const blocks = defFlatCodes.filter(c=>c===1).length;
+  const bonus = defFlatCodes.reduce((a,c)=>a + (c===7?7: c===2?2:0), 0);
+
+  return {offResults, defResults, own7, own3, ownBase, blocks, bonus};
+}
+
+// Apply opponent blocks (7s first, then 3s), then add my defense bonus
 function finalizeScore(myDetail, oppDetail){
-  let canceled7 = Math.min(myDetail.own7, oppDetail.blocks);
-  let remainingBlocks = oppDetail.blocks - canceled7;
-  let canceled3 = Math.min(myDetail.own3, remainingBlocks);
+  const cancel7 = Math.min(myDetail.own7, oppDetail.blocks);
+  const remBlocks = oppDetail.blocks - cancel7;
+  const cancel3 = Math.min(myDetail.own3, remBlocks);
+  const canceledPoints = cancel7*7 + cancel3*3;
 
-  const canceledPoints = canceled7*7 + canceled3*3;
-  let final = Math.max(0, myDetail.ownBase - canceledPoints) + myDetail.bonus;
+  const final = Math.max(0, myDetail.ownBase - canceledPoints) + myDetail.bonus;
 
-  return {
-    final,
-    canceled7,
-    canceled3,
-    canceledPoints
-  };
+  return { final, cancel7, cancel3, canceledPoints };
 }
 
-// Clamp helper
-function clamp0to4(v){
-  if (Number.isNaN(v)) return 0;
-  return Math.max(0, Math.min(4, v|0));
-}
-
-// Pretty print details for the UI
+// Pretty detail text
 function detailText(name, my, opp, fin){
-  const offFaces = my.offRolls.map(r=>`${r.slot}:${r.face}→${r.pts}`).join("  ");
-  const defFaces = my.defRolls.map(r=>{
-    const sym = (r.code===1?"block":(r.code===7?"+7":(r.code===2?"+2":"0")));
-    return `${r.slot}:${r.face}→${sym}`;
-  }).join("  ");
+  const offLines = my.offResults.map(r=>{
+    const f = r.faces.map((x,i)=>`${x}→${r.pts[i]}`).join(", ");
+    return `${r.slot} [O${r.rating}] : ${f}`;
+  }).join("\n");
+  const defLines = my.defResults.map(r=>{
+    const f = r.faces.map((x,i)=>{
+      const code = r.codes[i];
+      const sym = (code===1?"block":(code===7?"+7":(code===2?"+2":"0")));
+      return `${x}→${sym}`;
+    }).join(", ");
+    return `${r.slot} [D${r.rating}] : ${f}`;
+  }).join("\n");
 
   return [
-    `Off dice → ${offFaces}`,
-    `Def dice → ${defFaces}`,
+    `Off dice:\n${offLines}`,
+    `Def dice:\n${defLines}`,
     `Own offense before blocks: ${my.ownBase}`,
-    `Opponent blocks used: ${opp.blocks} (canceled ${fin.canceled7}×7 and ${fin.canceled3}×3 = −${fin.canceledPoints})`,
+    `Opponent blocks used: ${opp.blocks} (−${fin.canceledPoints} = ${fin.cancel7}×7 + ${fin.cancel3}×3)`,
     `Defense bonus added: +${my.bonus}`,
   ].join("\n");
 }
 
-// Run a full game (or re-roll only one side)
-function play({rollHome=true, rollAway=true} = {}){
+// Play one game
+function play(){
   const home = getTeamConfig("home");
   const away = getTeamConfig("away");
+
   document.getElementById("homeLabel").textContent = home.name;
   document.getElementById("awayLabel").textContent = away.name;
 
-  // If re-rolling a single side, preserve the other’s prior details? Simpler: always fresh both — consistent runs.
-  const homeDetail = resolveSide(home, away);
-  const awayDetail = resolveSide(away, home);
+  const homeDetail = resolveSide(home);
+  const awayDetail = resolveSide(away);
 
-  // Final scores after cross-effects
   const homeFinal = finalizeScore(homeDetail, awayDetail);
   const awayFinal = finalizeScore(awayDetail, homeDetail);
 
-  // Update UI
   document.getElementById("homeScore").textContent = homeFinal.final;
   document.getElementById("awayScore").textContent = awayFinal.final;
 
   document.getElementById("homeDetail").textContent = detailText(home.name, homeDetail, awayDetail, homeFinal);
   document.getElementById("awayDetail").textContent = detailText(away.name, awayDetail, homeDetail, awayFinal);
 
-  // Log summary
   const log = document.getElementById("log");
   const ev = document.createElement("div");
   ev.className = "event";
-  const winner =
-    homeFinal.final>awayFinal.final ? `${home.name} win`
-    : homeFinal.final<awayFinal.final ? `${away.name} win`
-    : "Tie";
-  ev.innerHTML = `<strong>${home.name} ${homeFinal.final} — ${awayFinal.final} ${away.name}</strong> <em>${winner}</em>`;
+  const verdict =
+    homeFinal.final>awayFinal.final ? `${home.name} win` :
+    homeFinal.final<awayFinal.final ? `${away.name} win` :
+    "Tie";
+  ev.innerHTML = `<strong>${home.name} ${homeFinal.final} — ${awayFinal.final} ${away.name}</strong> <em>${verdict}</em>`;
   log.prepend(ev);
-  while (log.children.length > 30) log.removeChild(log.lastChild);
+  while (log.children.length > 40) log.removeChild(log.lastChild);
 }
 
-// --- UI wiring ----------------------------------------------------------------
+// ---- Boot -----------------------------------------------------------------
 window.addEventListener("DOMContentLoaded", ()=>{
   populateRatingSelects();
 
-  // sensible defaults: offense ~2, defense ~2
-  const def0 = () => "2";
-  const off0 = () => "2";
-
+  // Defaults (neutral 2:2 everywhere)
+  const defVal = "2";
   [...OFF_SLOTS, ...DEF_SLOTS].forEach(slot=>{
-    document.getElementById(`home_${slot}_o`).value = off0();
-    document.getElementById(`home_${slot}_d`).value = def0();
-    document.getElementById(`away_${slot}_o`).value = off0();
-    document.getElementById(`away_${slot}_d`).value = def0();
+    document.getElementById(`home_${slot}_o`).value = defVal;
+    document.getElementById(`home_${slot}_d`).value = defVal;
+    document.getElementById(`away_${slot}_o`).value = defVal;
+    document.getElementById(`away_${slot}_d`).value = defVal;
   });
 
   document.getElementById("homeRandom").addEventListener("click", ()=>randomizeTeam("home"));
@@ -216,9 +246,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
     randomizeTeam("away");
   });
 
-  document.getElementById("rollAll").addEventListener("click", ()=>play());
-  document.getElementById("rerollHome").addEventListener("click", ()=>play({rollHome:true, rollAway:false}));
-  document.getElementById("rerollAway").addEventListener("click", ()=>play({rollHome:false, rollAway:true}));
+  document.getElementById("rollAll").addEventListener("click", play);
 
   // First roll
   play();
