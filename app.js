@@ -1,8 +1,8 @@
-// Gamebreakers College Football — Two dice per player (0–4 or “–” to skip).
-// Coach: two dice; each can be Off, Def, or “–”.
-// FLEX position removed from defense.
+// Gamebreakers College Football — League Manager + Play
+// Two dice per player (0–4 or "–"). Coach: two dice; Off/Def/–.
+// Defense slots: DL, LB, DB (no FLEX).
 
-// --- Tables ---------------------------------------------------------------
+// ---------- Core tables ----------
 const OFF_TABLE = {
   0: [3,0,0,0,0,0],
   1: [7,3,0,0,0,0],
@@ -17,86 +17,130 @@ const DEF_TABLE = {
   3: [1,1,1,0,0,0],
   4: [1,1,1,1,0,0]
 };
-
 const OFF_SLOTS = ["QB","RB","WR","OL"];
-const DEF_SLOTS = ["DL","LB","DB"]; // FLEX removed
+const DEF_SLOTS = ["DL","LB","DB"];
 
-// --- Utilities ------------------------------------------------------------
+// ---------- Utilities ----------
+const LS_KEY = "GBCF_LEAGUE_V1";
 function d6(){ return 1 + Math.floor(Math.random()*6); }
 function isDash(v){ return v === "-" || v === "–" || v === "" || v == null; }
 function toRating(v){ return isDash(v) ? null : Math.max(0, Math.min(4, v|0)); }
+function fromRating(r){ return (r==null?"-":String(r)); }
 
-// --- Populate selects -----------------------------------------------------
-function fillRatingSelect(id){
-  const sel = document.getElementById(id);
+function fillRatingSelect(sel){
   sel.innerHTML = "";
-  const dash = document.createElement("option");
-  dash.value = "-"; dash.textContent = "–";
-  sel.appendChild(dash);
-  for(let v=0; v<=4; v++){
-    const opt = document.createElement("option");
-    opt.value = String(v);
-    opt.textContent = String(v);
-    sel.appendChild(opt);
-  }
+  [["-","–"],["0","0"],["1","1"],["2","2"],["3","3"],["4","4"]].forEach(([val,txt])=>{
+    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
+  });
 }
-function fillCoachTypeSelect(id){
-  const sel = document.getElementById(id);
+function fillCoachTypeSelect(sel){
   sel.innerHTML = "";
   [["-","–"],["OFF","Off"],["DEF","Def"]].forEach(([val,txt])=>{
-    const opt = document.createElement("option");
-    opt.value = val; opt.textContent = txt;
-    sel.appendChild(opt);
+    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
   });
 }
-function populateAllSelects(){
+
+// ---------- League data ----------
+function defaultTeam(name){
+  return {
+    name,
+    offense:{
+      QB:{o1:2,o2:null}, RB:{o1:2,o2:null}, WR:{o1:2,o2:null}, OL:{o1:2,o2:null}
+    },
+    defense:{
+      DL:{d1:2,d2:null}, LB:{d1:2,d2:null}, DB:{d1:2,d2:null}
+    },
+    coach:{ t1:"-", r1:null, t2:"-", r2:null }
+  };
+}
+function defaultLeague(){
+  const confNames = ["Atlantic","Midwest","South","Pacific","Mountain","Northeast"];
+  const league = confNames.map((cName, ci)=>{
+    const teams = [];
+    for(let i=1;i<=12;i++){
+      teams.push(defaultTeam(`${cName} ${i}`));
+    }
+    return { name:cName, teams };
+  });
+  return league;
+}
+function loadLeague(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw){ const def = defaultLeague(); localStorage.setItem(LS_KEY, JSON.stringify(def)); return def; }
+    return JSON.parse(raw);
+  }catch(e){
+    console.warn("League load error; using defaults", e);
+    const def = defaultLeague();
+    localStorage.setItem(LS_KEY, JSON.stringify(def));
+    return def;
+  }
+}
+function saveLeague(league){ localStorage.setItem(LS_KEY, JSON.stringify(league)); }
+
+let LEAGUE = loadLeague();
+
+// ---------- Tabs ----------
+function initTabs(){
+  const tabs = document.querySelectorAll(".tab");
+  tabs.forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      tabs.forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      const name = btn.dataset.tab;
+      document.querySelectorAll(".tabpanel").forEach(p=>p.classList.remove("active"));
+      document.getElementById(`tab-${name}`).classList.add("active");
+      if(name==="league"){ renderLeagueSidebar(); clearEditorSelection(); }
+      if(name==="play"){ refreshTeamPickers(); }
+    });
+  });
+}
+
+// ---------- PLAY: selects + UI ----------
+function fillAllPlaySelects(){
   const ids = [];
+  OFF_SLOTS.forEach(s=>{
+    ids.push(`home_${s}_o1`,`home_${s}_o2`,`away_${s}_o1`,`away_${s}_o2`);
+  });
+  DEF_SLOTS.forEach(s=>{
+    ids.push(`home_${s}_d1`,`home_${s}_d2`,`away_${s}_d1`,`away_${s}_d2`);
+  });
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    fillRatingSelect(el);
+  });
+  ["home_COACH_r1","home_COACH_r2","away_COACH_r1","away_COACH_r2"].forEach(id=>{
+    fillRatingSelect(document.getElementById(id));
+  });
+  ["home_COACH_t1","home_COACH_t2","away_COACH_t1","away_COACH_t2"].forEach(id=>{
+    fillCoachTypeSelect(document.getElementById(id));
+  });
+}
+function neutralDefaultsPlay(){
   OFF_SLOTS.forEach(slot=>{
-    ids.push(`home_${slot}_o1`,`home_${slot}_o2`,`away_${slot}_o1`,`away_${slot}_o2`);
+    document.getElementById(`home_${slot}_o1`).value="2";
+    document.getElementById(`home_${slot}_o2`).value="-";
+    document.getElementById(`away_${slot}_o1`).value="2";
+    document.getElementById(`away_${slot}_o2`).value="-";
   });
   DEF_SLOTS.forEach(slot=>{
-    ids.push(`home_${slot}_d1`,`home_${slot}_d2`,`away_${slot}_d1`,`away_${slot}_d2`);
+    document.getElementById(`home_${slot}_d1`).value="2";
+    document.getElementById(`home_${slot}_d2`).value="-";
+    document.getElementById(`away_${slot}_d1`).value="2";
+    document.getElementById(`away_${slot}_d2`).value="-";
   });
-  ids.forEach(fillRatingSelect);
-
-  // Coach type + rating (two each per team)
   ["home","away"].forEach(side=>{
-    fillCoachTypeSelect(`${side}_COACH_t1`);
-    fillCoachTypeSelect(`${side}_COACH_t2`);
-    fillRatingSelect(`${side}_COACH_r1`);
-    fillRatingSelect(`${side}_COACH_r2`);
+    document.getElementById(`${side}Name`).value = side==="home"?"Home":"Away";
+    document.getElementById(`${side}_COACH_t1`).value="-";
+    document.getElementById(`${side}_COACH_t2`).value="-";
+    document.getElementById(`${side}_COACH_r1`).value="-";
+    document.getElementById(`${side}_COACH_r2`).value="-";
   });
+  document.getElementById("homeLabel").textContent = "Home";
+  document.getElementById("awayLabel").textContent = "Away";
 }
-
-// --- Team config ----------------------------------------------------------
-function getTeamConfig(side){
-  const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
-
-  const offense = OFF_SLOTS.map(slot=>{
-    const o1 = toRating(document.getElementById(`${side}_${slot}_o1`).value);
-    const o2 = toRating(document.getElementById(`${side}_${slot}_o2`).value);
-    return { slot, o1, o2 };
-  });
-
-  const defense = DEF_SLOTS.map(slot=>{
-    const d1 = toRating(document.getElementById(`${side}_${slot}_d1`).value);
-    const d2 = toRating(document.getElementById(`${side}_${slot}_d2`).value);
-    return { slot, d1, d2 };
-  });
-
-  const coach = {
-    t1: document.getElementById(`${side}_COACH_t1`).value, // "-", "OFF", "DEF"
-    r1: toRating(document.getElementById(`${side}_COACH_r1`).value),
-    t2: document.getElementById(`${side}_COACH_t2`).value,
-    r2: toRating(document.getElementById(`${side}_COACH_r2`).value),
-  };
-
-  return { name, offense, defense, coach };
-}
-
-// --- Randomize / Clear ----------------------------------------------------
 function randomPickOrDash(probDash){
-  if (Math.random() < probDash) return "-";
+  if (Math.random()<probDash) return "-";
   const r = Math.random();
   if (r < 0.15) return "0";
   if (r < 0.55) return "2";
@@ -111,7 +155,7 @@ function randomCoachType(){
   if (r < 0.85) return "-";
   return "OFF";
 }
-function randomizeTeam(side){
+function randomizeSide(side){
   OFF_SLOTS.forEach(slot=>{
     document.getElementById(`${side}_${slot}_o1`).value = randomPickOrDash(0.15);
     document.getElementById(`${side}_${slot}_o2`).value = randomPickOrDash(0.40);
@@ -120,60 +164,104 @@ function randomizeTeam(side){
     document.getElementById(`${side}_${slot}_d1`).value = randomPickOrDash(0.15);
     document.getElementById(`${side}_${slot}_d2`).value = randomPickOrDash(0.40);
   });
-  // Coach
   document.getElementById(`${side}_COACH_t1`).value = randomCoachType();
   document.getElementById(`${side}_COACH_t2`).value = randomCoachType();
   document.getElementById(`${side}_COACH_r1`).value = randomPickOrDash(0.20);
   document.getElementById(`${side}_COACH_r2`).value = randomPickOrDash(0.35);
 }
-function clearTeam(side){
+function clearSide(side){
   OFF_SLOTS.forEach(slot=>{
-    document.getElementById(`${side}_${slot}_o1`).value = "–";
-    document.getElementById(`${side}_${slot}_o2`).value = "–";
+    document.getElementById(`${side}_${slot}_o1`).value = "-";
+    document.getElementById(`${side}_${slot}_o2`).value = "-";
   });
   DEF_SLOTS.forEach(slot=>{
-    document.getElementById(`${side}_${slot}_d1`).value = "–";
-    document.getElementById(`${side}_${slot}_d2`).value = "–";
+    document.getElementById(`${side}_${slot}_d1`).value = "-";
+    document.getElementById(`${side}_${slot}_d2`).value = "-";
   });
-  document.getElementById(`${side}_COACH_t1`).value = "-";
-  document.getElementById(`${side}_COACH_t2`).value = "-";
-  document.getElementById(`${side}_COACH_r1`).value = "–";
-  document.getElementById(`${side}_COACH_r2`).value = "–";
+  document.getElementById(`${side}_COACH_t1`).value="-";
+  document.getElementById(`${side}_COACH_t2`).value="-";
+  document.getElementById(`${side}_COACH_r1`).value="-";
+  document.getElementById(`${side}_COACH_r2`).value="-";
+  document.getElementById(`${side}Name`).value = side==="home"?"Home":"Away";
 }
 
-// Bulk helpers for O2/D2 (coach dice are independent)
-function copyAllO2fromO1(){
-  ["home","away"].forEach(side=>{
-    OFF_SLOTS.forEach(slot=>{
-      document.getElementById(`${side}_${slot}_o2`).value =
-        document.getElementById(`${side}_${slot}_o1`).value;
-    });
+// Collect side config from Play UI
+function collectSide(side){
+  const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
+  const offense = {};
+  OFF_SLOTS.forEach(s=>{
+    offense[s] = {
+      o1: toRating(document.getElementById(`${side}_${s}_o1`).value),
+      o2: toRating(document.getElementById(`${side}_${s}_o2`).value)
+    };
   });
-}
-function clearAllO2(){
-  ["home","away"].forEach(side=>{
-    OFF_SLOTS.forEach(slot=>{
-      document.getElementById(`${side}_${slot}_o2`).value = "–";
-    });
+  const defense = {};
+  DEF_SLOTS.forEach(s=>{
+    defense[s] = {
+      d1: toRating(document.getElementById(`${side}_${s}_d1`).value),
+      d2: toRating(document.getElementById(`${side}_${s}_d2`).value)
+    };
   });
+  const coach = {
+    t1: document.getElementById(`${side}_COACH_t1`).value,
+    r1: toRating(document.getElementById(`${side}_COACH_r1`).value),
+    t2: document.getElementById(`${side}_COACH_t2`).value,
+    r2: toRating(document.getElementById(`${side}_COACH_r2`).value),
+  };
+  return { name, offense, defense, coach };
 }
-function copyAllD2fromD1(){
-  ["home","away"].forEach(side=>{
-    DEF_SLOTS.forEach(slot=>{
-      document.getElementById(`${side}_${slot}_d2`).value =
-        document.getElementById(`${side}_${slot}_d1`).value;
-    });
+
+// Apply a team object to a side (Play)
+function applyTeamToSide(team, side){
+  document.getElementById(`${side}Name`).value = team.name || (side==="home"?"Home":"Away");
+  OFF_SLOTS.forEach(s=>{
+    document.getElementById(`${side}_${s}_o1`).value = fromRating(team.offense[s].o1);
+    document.getElementById(`${side}_${s}_o2`).value = fromRating(team.offense[s].o2);
   });
+  DEF_SLOTS.forEach(s=>{
+    document.getElementById(`${side}_${s}_d1`).value = fromRating(team.defense[s].d1);
+    document.getElementById(`${side}_${s}_d2`).value = fromRating(team.defense[s].d2);
+  });
+  document.getElementById(`${side}_COACH_t1`).value = team.coach.t1 || "-";
+  document.getElementById(`${side}_COACH_t2`).value = team.coach.t2 || "-";
+  document.getElementById(`${side}_COACH_r1`).value = fromRating(team.coach.r1);
+  document.getElementById(`${side}_COACH_r2`).value = fromRating(team.coach.r2);
+  document.getElementById(`${side}Label`).textContent = team.name || (side==="home"?"Home":"Away");
 }
-function clearAllD2(){
-  ["home","away"].forEach(side=>{
-    DEF_SLOTS.forEach(slot=>{
-      document.getElementById(`${side}_${slot}_d2`).value = "–";
+
+// Populate the pickers with all league teams
+function refreshTeamPickers(){
+  const lists = [
+    document.getElementById("pickHomeTeam"),
+    document.getElementById("pickAwayTeam")
+  ];
+  lists.forEach(sel=>{
+    sel.innerHTML = "";
+    LEAGUE.forEach((conf, ci)=>{
+      const optg = document.createElement("optgroup");
+      optg.label = conf.name;
+      conf.teams.forEach((t, ti)=>{
+        const opt = document.createElement("option");
+        opt.value = `${ci}:${ti}`;
+        opt.textContent = t.name;
+        optg.appendChild(opt);
+      });
+      sel.appendChild(optg);
     });
   });
 }
 
-// --- Rolling --------------------------------------------------------------
+function getTeamByIndexStr(indexStr){
+  const [ci, ti] = indexStr.split(":").map(x=>parseInt(x,10));
+  return LEAGUE[ci].teams[ti];
+}
+function setTeamByIndexStr(indexStr, teamObj){
+  const [ci, ti] = indexStr.split(":").map(x=>parseInt(x,10));
+  LEAGUE[ci].teams[ti] = teamObj;
+  saveLeague(LEAGUE);
+}
+
+// ---------- Dice + Resolution ----------
 function rollOffDie(rating){
   const face = d6();
   const pts = OFF_TABLE[rating][face-1];
@@ -184,57 +272,44 @@ function rollDefDie(rating){
   const code = DEF_TABLE[rating][face-1]; // 1=block, 7=+7, 2=+2, 0
   return { face, code };
 }
-
-// Coach processing: returns {offResults[], defResults[]}
 function rollCoach(coach){
-  const offResults = [];
-  const defResults = [];
+  const offResults = []; const defResults = [];
   const doOne = (which, t, r)=>{
     if (t === "-" || r == null) return;
-    if (t === "OFF"){
-      const {face, pts} = rollOffDie(r);
-      offResults.push({slot:"Coach", which, rating:r, face, pts});
-    } else if (t === "DEF"){
-      const {face, code} = rollDefDie(r);
-      defResults.push({slot:"Coach", which, rating:r, face, code});
-    }
+    if (t === "OFF"){ const {face, pts} = rollOffDie(r); offResults.push({slot:"Coach", which, rating:r, face, pts}); }
+    else if (t === "DEF"){ const {face, code} = rollDefDie(r); defResults.push({slot:"Coach", which, rating:r, face, code}); }
   };
-  doOne("C1", coach.t1, coach.r1);
-  doOne("C2", coach.t2, coach.r2);
+  doOne("C1", coach.t1, coach.r1); doOne("C2", coach.t2, coach.r2);
   return { offResults, defResults };
 }
-
-function resolveSide(my){
-  // OFFENSE (players)
+function resolveSide(sideObj){
   const offResults = [];
-  my.offense.forEach(gb=>{
-    if (gb.o1!=null){ const r = rollOffDie(gb.o1); offResults.push({slot:gb.slot, which:"O1", rating:gb.o1, ...r}); }
-    if (gb.o2!=null){ const r = rollOffDie(gb.o2); offResults.push({slot:gb.slot, which:"O2", rating:gb.o2, ...r}); }
+  OFF_SLOTS.forEach(s=>{
+    const {o1,o2} = sideObj.offense[s];
+    if(o1!=null){ const r=rollOffDie(o1); offResults.push({slot:s,which:"O1",rating:o1,...r}); }
+    if(o2!=null){ const r=rollOffDie(o2); offResults.push({slot:s,which:"O2",rating:o2,...r}); }
   });
 
-  // DEFENSE (players)
   const defResults = [];
-  my.defense.forEach(gb=>{
-    if (gb.d1!=null){ const r = rollDefDie(gb.d1); defResults.push({slot:gb.slot, which:"D1", rating:gb.d1, ...r}); }
-    if (gb.d2!=null){ const r = rollDefDie(gb.d2); defResults.push({slot:gb.slot, which:"D2", rating:gb.d2, ...r}); }
+  DEF_SLOTS.forEach(s=>{
+    const {d1,d2} = sideObj.defense[s];
+    if(d1!=null){ const r=rollDefDie(d1); defResults.push({slot:s,which:"D1",rating:d1,...r}); }
+    if(d2!=null){ const r=rollDefDie(d2); defResults.push({slot:s,which:"D2",rating:d2,...r}); }
   });
 
-  // COACH
-  const coachPack = rollCoach(my.coach);
+  const coachPack = rollCoach(sideObj.coach);
   const offAll = offResults.concat(coachPack.offResults);
   const defAll = defResults.concat(coachPack.defResults);
 
-  // Tally
   const own7 = offAll.filter(r=>r.pts===7).length;
   const own3 = offAll.filter(r=>r.pts===3).length;
-  const ownBase = offAll.reduce((a,r)=>a + r.pts, 0);
+  const ownBase = offAll.reduce((a,r)=>a+r.pts,0);
 
   const blocks = defAll.filter(r=>r.code===1).length;
-  const bonus = defAll.reduce((a,r)=>a + (r.code===7?7:(r.code===2?2:0)), 0);
+  const bonus = defAll.reduce((a,r)=>a+(r.code===7?7:(r.code===2?2:0)),0);
 
-  return { offResults: offAll, defResults: defAll, own7, own3, ownBase, blocks, bonus };
+  return { offResults:offAll, defResults:defAll, own7, own3, ownBase, blocks, bonus };
 }
-
 function finalizeScore(myDetail, oppDetail){
   const cancel7 = Math.min(myDetail.own7, oppDetail.blocks);
   const rem = oppDetail.blocks - cancel7;
@@ -243,8 +318,6 @@ function finalizeScore(myDetail, oppDetail){
   const final = Math.max(0, myDetail.ownBase - canceledPoints) + myDetail.bonus;
   return { final, cancel7, cancel3, canceledPoints };
 }
-
-// --- UI details -----------------------------------------------------------
 function detailText(name, my, opp, fin){
   const offLines = my.offResults.map(r=>`${r.slot}/${r.which}[${r.rating}] ${r.face}→${r.pts}`).join(", ");
   const defLines = my.defResults.map(r=>{
@@ -260,11 +333,9 @@ function detailText(name, my, opp, fin){
     `Defense bonus added: +${my.bonus}`,
   ].join("\n");
 }
-
-// --- Play -----------------------------------------------------------------
-function play(){
-  const home = getTeamConfig("home");
-  const away = getTeamConfig("away");
+function playOne(){
+  const home = collectSide("home");
+  const away = collectSide("away");
 
   document.getElementById("homeLabel").textContent = home.name;
   document.getElementById("awayLabel").textContent = away.name;
@@ -289,47 +360,234 @@ function play(){
   while (log.children.length > 40) log.removeChild(log.lastChild);
 }
 
-// --- Boot -----------------------------------------------------------------
+// ---------- League Manager UI ----------
+let selectedCI = null; // conference index
+let selectedTI = null; // team index
+
+function renderLeagueSidebar(){
+  const box = document.getElementById("leagueSidebar");
+  box.innerHTML = "";
+  LEAGUE.forEach((conf, ci)=>{
+    const block = document.createElement("div");
+    block.className = "conf-block";
+    const title = document.createElement("div");
+    title.className = "conf-title";
+    title.textContent = conf.name;
+    block.appendChild(title);
+
+    conf.teams.forEach((t, ti)=>{
+      const item = document.createElement("div");
+      item.className = "team-item";
+      item.dataset.ci = ci;
+      item.dataset.ti = ti;
+      item.innerHTML = `<span>${t.name}</span><small>#${ti+1}</small>`;
+      if (ci===selectedCI && ti===selectedTI) item.classList.add("active");
+      item.addEventListener("click", ()=>{
+        selectedCI = ci; selectedTI = ti;
+        renderLeagueSidebar();
+        loadTeamIntoEditor(LEAGUE[ci].teams[ti]);
+      });
+      block.appendChild(item);
+    });
+
+    box.appendChild(block);
+  });
+}
+
+function editorSelectIds(){
+  const ids = [];
+  OFF_SLOTS.forEach(s=>{ ids.push(`edit_${s}_o1`,`edit_${s}_o2`); });
+  DEF_SLOTS.forEach(s=>{ ids.push(`edit_${s}_d1`,`edit_${s}_d2`); });
+  ids.push("edit_COACH_t1","edit_COACH_r1","edit_COACH_t2","edit_COACH_r2");
+  return ids;
+}
+function setupEditorSelects(){
+  editorSelectIds().forEach(id=>{
+    const el = document.getElementById(id);
+    if (id.includes("_t")) fillCoachTypeSelect(el);
+    else fillRatingSelect(el);
+  });
+}
+function clearEditorSelection(){
+  document.getElementById("editTeamTitle").textContent = "Select a team";
+  document.getElementById("editTeamName").value = "";
+  editorSelectIds().forEach(id=>{
+    const el = document.getElementById(id);
+    if (id.includes("_t")) el.value = "-";
+    else el.value = "-";
+  });
+}
+function loadTeamIntoEditor(team){
+  document.getElementById("editTeamTitle").textContent = team.name;
+  document.getElementById("editTeamName").value = team.name;
+
+  OFF_SLOTS.forEach(s=>{
+    document.getElementById(`edit_${s}_o1`).value = fromRating(team.offense[s].o1);
+    document.getElementById(`edit_${s}_o2`).value = fromRating(team.offense[s].o2);
+  });
+  DEF_SLOTS.forEach(s=>{
+    document.getElementById(`edit_${s}_d1`).value = fromRating(team.defense[s].d1);
+    document.getElementById(`edit_${s}_d2`).value = fromRating(team.defense[s].d2);
+  });
+  document.getElementById("edit_COACH_t1").value = team.coach.t1 || "-";
+  document.getElementById("edit_COACH_t2").value = team.coach.t2 || "-";
+  document.getElementById("edit_COACH_r1").value = fromRating(team.coach.r1);
+  document.getElementById("edit_COACH_r2").value = fromRating(team.coach.r2);
+}
+
+function collectEditorToTeam(baseTeam){
+  const name = document.getElementById("editTeamName").value.trim() || baseTeam.name;
+  const team = JSON.parse(JSON.stringify(baseTeam));
+  team.name = name;
+
+  OFF_SLOTS.forEach(s=>{
+    team.offense[s].o1 = toRating(document.getElementById(`edit_${s}_o1`).value);
+    team.offense[s].o2 = toRating(document.getElementById(`edit_${s}_o2`).value);
+  });
+  DEF_SLOTS.forEach(s=>{
+    team.defense[s].d1 = toRating(document.getElementById(`edit_${s}_d1`).value);
+    team.defense[s].d2 = toRating(document.getElementById(`edit_${s}_d2`).value);
+  });
+  team.coach.t1 = document.getElementById("edit_COACH_t1").value;
+  team.coach.t2 = document.getElementById("edit_COACH_t2").value;
+  team.coach.r1 = toRating(document.getElementById("edit_COACH_r1").value);
+  team.coach.r2 = toRating(document.getElementById("edit_COACH_r2").value);
+
+  return team;
+}
+
+// ---------- Wire up ----------
 window.addEventListener("DOMContentLoaded", ()=>{
-  populateAllSelects();
+  initTabs();
 
-  // Defaults: players O1/D1 at 2, O2/D2 “–”; Coach both “–”
-  OFF_SLOTS.forEach(slot=>{
-    document.getElementById(`home_${slot}_o1`).value = "2";
-    document.getElementById(`home_${slot}_o2`).value = "–";
-    document.getElementById(`away_${slot}_o1`).value = "2";
-    document.getElementById(`away_${slot}_o2`).value = "–";
+  // PLAY setup
+  fillAllPlaySelects();
+  neutralDefaultsPlay();
+
+  document.getElementById("homeRandom").addEventListener("click", ()=>randomizeSide("home"));
+  document.getElementById("homeClear").addEventListener("click", ()=>clearSide("home"));
+  document.getElementById("awayRandom").addEventListener("click", ()=>randomizeSide("away"));
+  document.getElementById("awayClear").addEventListener("click", ()=>clearSide("away"));
+  document.getElementById("bothRandom").addEventListener("click", ()=>{ randomizeSide("home"); randomizeSide("away"); });
+  document.getElementById("rollAll").addEventListener("click", playOne);
+
+  // Team pickers
+  refreshTeamPickers();
+  document.getElementById("btnLoadHome").addEventListener("click", ()=>{
+    const id = document.getElementById("pickHomeTeam").value;
+    if(!id) return;
+    const team = getTeamByIndexStr(id);
+    applyTeamToSide(team, "home");
   });
-  DEF_SLOTS.forEach(slot=>{
-    document.getElementById(`home_${slot}_d1`).value = "2";
-    document.getElementById(`home_${slot}_d2`).value = "–";
-    document.getElementById(`away_${slot}_d1`).value = "2";
-    document.getElementById(`away_${slot}_d2`).value = "–";
-  });
-  ["home","away"].forEach(side=>{
-    document.getElementById(`${side}_COACH_t1`).value = "-";
-    document.getElementById(`${side}_COACH_t2`).value = "-";
-    document.getElementById(`${side}_COACH_r1`).value = "–";
-    document.getElementById(`${side}_COACH_r2`).value = "–";
+  document.getElementById("btnLoadAway").addEventListener("click", ()=>{
+    const id = document.getElementById("pickAwayTeam").value;
+    if(!id) return;
+    const team = getTeamByIndexStr(id);
+    applyTeamToSide(team, "away");
   });
 
-  // Buttons
-  document.getElementById("homeRandom").addEventListener("click", ()=>randomizeTeam("home"));
-  document.getElementById("homeClear").addEventListener("click", ()=>clearTeam("home"));
-  document.getElementById("awayRandom").addEventListener("click", ()=>randomizeTeam("away"));
-  document.getElementById("awayClear").addEventListener("click", ()=>clearTeam("away"));
-  document.getElementById("bothRandom").addEventListener("click", ()=>{
-    randomizeTeam("home"); randomizeTeam("away");
+  document.getElementById("btnSaveHomeBack").addEventListener("click", ()=>{
+    const sel = document.getElementById("pickHomeTeam").value;
+    if(!sel) return;
+    const team = collectSide("home");
+    setTeamByIndexStr(sel, team);
+    renderLeagueSidebar(); // update names if changed
+    refreshTeamPickers();
   });
-  document.querySelector('[data-bulk="o2-copy"]').addEventListener("click", copyAllO2fromO1);
-  document.querySelector('[data-bulk="o2-clear"]').addEventListener("click", clearAllO2);
-  document.querySelector('[data-bulk="d2-copy"]').addEventListener("click", copyAllD2fromD1);
-  document.querySelector('[data-bulk="d2-clear"]').addEventListener("click", clearAllD2);
-  document.getElementById("rollAll").addEventListener("click", play);
+  document.getElementById("btnSaveAwayBack").addEventListener("click", ()=>{
+    const sel = document.getElementById("pickAwayTeam").value;
+    if(!sel) return;
+    const team = collectSide("away");
+    setTeamByIndexStr(sel, team);
+    renderLeagueSidebar();
+    refreshTeamPickers();
+  });
 
-  // First roll
-  play();
+  // LEAGUE setup
+  setupEditorSelects();
+  renderLeagueSidebar();
+  clearEditorSelection();
+
+  // Editor buttons
+  document.getElementById("editRandom").addEventListener("click", ()=>{
+    if(selectedCI==null) return;
+    const side = "edit"; // reuse helpers
+    // quick randomize in editor
+    OFF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_o1`).value = randomPickOrDash(0.15);
+      document.getElementById(`edit_${s}_o2`).value = randomPickOrDash(0.40);
+    });
+    DEF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_d1`).value = randomPickOrDash(0.15);
+      document.getElementById(`edit_${s}_d2`).value = randomPickOrDash(0.40);
+    });
+    document.getElementById("edit_COACH_t1").value = randomCoachType();
+    document.getElementById("edit_COACH_t2").value = randomCoachType();
+    document.getElementById("edit_COACH_r1").value = randomPickOrDash(0.20);
+    document.getElementById("edit_COACH_r2").value = randomPickOrDash(0.35);
+  });
+
+  document.getElementById("editClear").addEventListener("click", ()=>{
+    if(selectedCI==null) return;
+    OFF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_o1`).value = "-";
+      document.getElementById(`edit_${s}_o2`).value = "-";
+    });
+    DEF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_d1`).value = "-";
+      document.getElementById(`edit_${s}_d2`).value = "-";
+    });
+    document.getElementById("edit_COACH_t1").value = "-";
+    document.getElementById("edit_COACH_t2").value = "-";
+    document.getElementById("edit_COACH_r1").value = "-";
+    document.getElementById("edit_COACH_r2").value = "-";
+  });
+
+  document.getElementById("editSave").addEventListener("click", ()=>{
+    if(selectedCI==null) return;
+    const base = LEAGUE[selectedCI].teams[selectedTI];
+    const updated = collectEditorToTeam(base);
+    LEAGUE[selectedCI].teams[selectedTI] = updated;
+    saveLeague(LEAGUE);
+    renderLeagueSidebar();
+    refreshTeamPickers();
+    loadTeamIntoEditor(updated); // reflect normalized values
+  });
+
+  // Export / Import / Reset
+  document.getElementById("exportLeague").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(LEAGUE, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "league.json"; a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById("importLeagueFile").addEventListener("change", async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    const txt = await f.text();
+    try{
+      const data = JSON.parse(txt);
+      // naive validation
+      if (!Array.isArray(data) || data.length!==6) throw new Error("Invalid league file.");
+      LEAGUE = data;
+      saveLeague(LEAGUE);
+      renderLeagueSidebar(); refreshTeamPickers(); clearEditorSelection();
+    }catch(err){
+      alert("Import failed: " + err.message);
+    } finally {
+      e.target.value = "";
+    }
+  });
+  document.getElementById("resetLeague").addEventListener("click", ()=>{
+    if(!confirm("Reset league to defaults? This overwrites all saved teams.")) return;
+    LEAGUE = defaultLeague();
+    saveLeague(LEAGUE);
+    renderLeagueSidebar(); refreshTeamPickers(); clearEditorSelection();
+  });
+
+  // First visible roll result
+  playOne();
 });
+
 
 
 
