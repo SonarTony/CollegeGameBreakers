@@ -43,12 +43,15 @@ p{ margin:.25rem 0; }
 .team-actions button{ margin-left:.3rem; }
 
 .gb-grid h3{ margin-top:.6rem; color:var(--accent); }
-.row{ display:flex; align-items:center; justify-content:space-between; padding:.4rem 0; border-bottom:1px dashed var(--line); }
+.row{ display:flex; align-items:center; gap:.5rem; padding:.4rem 0; border-bottom:1px dashed var(--line); }
 .row:last-child{ border-bottom:none; }
-label{ color:var(--ink); }
+label{ color:var(--ink); min-width:64px; }
 .pair{ display:flex; align-items:center; gap:.45rem; flex-wrap:wrap; }
 select{
   background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem; width:110px;
+}
+.pname{
+  background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem; width:180px;
 }
 
 .controls{
@@ -118,6 +121,7 @@ button.primary:hover{ filter:brightness(1.05); }
   .play-loader{ grid-template-columns:1fr; }
   .league-wrap{ grid-template-columns:1fr; }
 }
+
 
 
 

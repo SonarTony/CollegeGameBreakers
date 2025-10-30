@@ -47,19 +47,55 @@
 
         <div class="gb-grid">
           <h3>Offense</h3>
-          <div class="row"><label>QB (O1,O2)</label><div class="pair"><select id="home_QB_o1"></select><select id="home_QB_o2"></select></div></div>
-          <div class="row"><label>RB (O1,O2)</label><div class="pair"><select id="home_RB_o1"></select><select id="home_RB_o2"></select></div></div>
-          <div class="row"><label>WR (O1,O2)</label><div class="pair"><select id="home_WR_o1"></select><select id="home_WR_o2"></select></div></div>
-          <div class="row"><label>OL (O1,O2)</label><div class="pair"><select id="home_OL_o1"></select><select id="home_OL_o2"></select></div></div>
+          <div class="row">
+            <label>QB</label>
+            <input class="pname" id="home_QB_name" placeholder="QB name"/>
+            <div class="pair"><select id="home_QB_o1"></select><select id="home_QB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>RB</label>
+            <input class="pname" id="home_RB_name" placeholder="RB name"/>
+            <div class="pair"><select id="home_RB_o1"></select><select id="home_RB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>WR</label>
+            <input class="pname" id="home_WR_name" placeholder="WR name"/>
+            <div class="pair"><select id="home_WR_o1"></select><select id="home_WR_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>OL</label>
+            <input class="pname" id="home_OL_name" placeholder="OL unit name"/>
+            <div class="pair"><select id="home_OL_o1"></select><select id="home_OL_o2"></select></div>
+          </div>
 
           <h3>Defense</h3>
-          <div class="row"><label>DL (D1,D2)</label><div class="pair"><select id="home_DL_d1"></select><select id="home_DL_d2"></select></div></div>
-          <div class="row"><label>LB (D1,D2)</label><div class="pair"><select id="home_LB_d1"></select><select id="home_LB_d2"></select></div></div>
-          <div class="row"><label>DB (D1,D2)</label><div class="pair"><select id="home_DB_d1"></select><select id="home_DB_d2"></select></div></div>
+          <div class="row">
+            <label>DL</label>
+            <input class="pname" id="home_DL_name" placeholder="DL unit name"/>
+            <div class="pair"><select id="home_DL_d1"></select><select id="home_DL_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>LB</label>
+            <input class="pname" id="home_LB_name" placeholder="LB unit name"/>
+            <div class="pair"><select id="home_LB_d1"></select><select id="home_LB_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>DB</label>
+            <input class="pname" id="home_DB_name" placeholder="DB unit name"/>
+            <div class="pair"><select id="home_DB_d1"></select><select id="home_DB_d2"></select></div>
+          </div>
 
           <h3>Coach</h3>
-          <div class="row"><label>Coach Die 1</label><div class="pair"><select id="home_COACH_t1"></select><select id="home_COACH_r1"></select></div></div>
-          <div class="row"><label>Coach Die 2</label><div class="pair"><select id="home_COACH_t2"></select><select id="home_COACH_r2"></select></div></div>
+          <div class="row">
+            <label>Head Coach</label>
+            <input class="pname" id="home_COACH_name" placeholder="Coach name"/>
+            <div class="pair"><select id="home_COACH_t1"></select><select id="home_COACH_r1"></select></div>
+          </div>
+          <div class="row">
+            <label>Coach Die 2</label>
+            <input class="pname" disabled value="—"/>
+            <div class="pair"><select id="home_COACH_t2"></select><select id="home_COACH_r2"></select></div>
+          </div>
         </div>
       </div>
 
@@ -77,19 +113,55 @@
 
         <div class="gb-grid">
           <h3>Offense</h3>
-          <div class="row"><label>QB (O1,O2)</label><div class="pair"><select id="away_QB_o1"></select><select id="away_QB_o2"></select></div></div>
-          <div class="row"><label>RB (O1,O2)</label><div class="pair"><select id="away_RB_o1"></select><select id="away_RB_o2"></select></div></div>
-          <div class="row"><label>WR (O1,O2)</label><div class="pair"><select id="away_WR_o1"></select><select id="away_WR_o2"></select></div></div>
-          <div class="row"><label>OL (O1,O2)</label><div class="pair"><select id="away_OL_o1"></select><select id="away_OL_o2"></select></div></div>
+          <div class="row">
+            <label>QB</label>
+            <input class="pname" id="away_QB_name" placeholder="QB name"/>
+            <div class="pair"><select id="away_QB_o1"></select><select id="away_QB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>RB</label>
+            <input class="pname" id="away_RB_name" placeholder="RB name"/>
+            <div class="pair"><select id="away_RB_o1"></select><select id="away_RB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>WR</label>
+            <input class="pname" id="away_WR_name" placeholder="WR name"/>
+            <div class="pair"><select id="away_WR_o1"></select><select id="away_WR_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>OL</label>
+            <input class="pname" id="away_OL_name" placeholder="OL unit name"/>
+            <div class="pair"><select id="away_OL_o1"></select><select id="away_OL_o2"></select></div>
+          </div>
 
           <h3>Defense</h3>
-          <div class="row"><label>DL (D1,D2)</label><div class="pair"><select id="away_DL_d1"></select><select id="away_DL_d2"></select></div></div>
-          <div class="row"><label>LB (D1,D2)</label><div class="pair"><select id="away_LB_d1"></select><select id="away_LB_d2"></select></div></div>
-          <div class="row"><label>DB (D1,D2)</label><div class="pair"><select id="away_DB_d1"></select><select id="away_DB_d2"></select></div></div>
+          <div class="row">
+            <label>DL</label>
+            <input class="pname" id="away_DL_name" placeholder="DL unit name"/>
+            <div class="pair"><select id="away_DL_d1"></select><select id="away_DL_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>LB</label>
+            <input class="pname" id="away_LB_name" placeholder="LB unit name"/>
+            <div class="pair"><select id="away_LB_d1"></select><select id="away_LB_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>DB</label>
+            <input class="pname" id="away_DB_name" placeholder="DB unit name"/>
+            <div class="pair"><select id="away_DB_d1"></select><select id="away_DB_d2"></select></div>
+          </div>
 
           <h3>Coach</h3>
-          <div class="row"><label>Coach Die 1</label><div class="pair"><select id="away_COACH_t1"></select><select id="away_COACH_r1"></select></div></div>
-          <div class="row"><label>Coach Die 2</label><div class="pair"><select id="away_COACH_t2"></select><select id="away_COACH_r2"></select></div></div>
+          <div class="row">
+            <label>Head Coach</label>
+            <input class="pname" id="away_COACH_name" placeholder="Coach name"/>
+            <div class="pair"><select id="away_COACH_t1"></select><select id="away_COACH_r1"></select></div>
+          </div>
+          <div class="row">
+            <label>Coach Die 2</label>
+            <input class="pname" disabled value="—"/>
+            <div class="pair"><select id="away_COACH_t2"></select><select id="away_COACH_r2"></select></div>
+          </div>
         </div>
       </div>
     </section>
@@ -137,19 +209,55 @@
 
         <div class="gb-grid">
           <h3>Offense</h3>
-          <div class="row"><label>QB (O1,O2)</label><div class="pair"><select id="edit_QB_o1"></select><select id="edit_QB_o2"></select></div></div>
-          <div class="row"><label>RB (O1,O2)</label><div class="pair"><select id="edit_RB_o1"></select><select id="edit_RB_o2"></select></div></div>
-          <div class="row"><label>WR (O1,O2)</label><div class="pair"><select id="edit_WR_o1"></select><select id="edit_WR_o2"></select></div></div>
-          <div class="row"><label>OL (O1,O2)</label><div class="pair"><select id="edit_OL_o1"></select><select id="edit_OL_o2"></select></div></div>
+          <div class="row">
+            <label>QB</label>
+            <input class="pname" id="edit_QB_name" placeholder="QB name"/>
+            <div class="pair"><select id="edit_QB_o1"></select><select id="edit_QB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>RB</label>
+            <input class="pname" id="edit_RB_name" placeholder="RB name"/>
+            <div class="pair"><select id="edit_RB_o1"></select><select id="edit_RB_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>WR</label>
+            <input class="pname" id="edit_WR_name" placeholder="WR name"/>
+            <div class="pair"><select id="edit_WR_o1"></select><select id="edit_WR_o2"></select></div>
+          </div>
+          <div class="row">
+            <label>OL</label>
+            <input class="pname" id="edit_OL_name" placeholder="OL unit name"/>
+            <div class="pair"><select id="edit_OL_o1"></select><select id="edit_OL_o2"></select></div>
+          </div>
 
           <h3>Defense</h3>
-          <div class="row"><label>DL (D1,D2)</label><div class="pair"><select id="edit_DL_d1"></select><select id="edit_DL_d2"></select></div></div>
-          <div class="row"><label>LB (D1,D2)</label><div class="pair"><select id="edit_LB_d1"></select><select id="edit_LB_d2"></select></div></div>
-          <div class="row"><label>DB (D1,D2)</label><div class="pair"><select id="edit_DB_d1"></select><select id="edit_DB_d2"></select></div></div>
+          <div class="row">
+            <label>DL</label>
+            <input class="pname" id="edit_DL_name" placeholder="DL unit name"/>
+            <div class="pair"><select id="edit_DL_d1"></select><select id="edit_DL_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>LB</label>
+            <input class="pname" id="edit_LB_name" placeholder="LB unit name"/>
+            <div class="pair"><select id="edit_LB_d1"></select><select id="edit_LB_d2"></select></div>
+          </div>
+          <div class="row">
+            <label>DB</label>
+            <input class="pname" id="edit_DB_name" placeholder="DB unit name"/>
+            <div class="pair"><select id="edit_DB_d1"></select><select id="edit_DB_d2"></select></div>
+          </div>
 
           <h3>Coach</h3>
-          <div class="row"><label>Coach Die 1</label><div class="pair"><select id="edit_COACH_t1"></select><select id="edit_COACH_r1"></select></div></div>
-          <div class="row"><label>Coach Die 2</label><div class="pair"><select id="edit_COACH_t2"></select><select id="edit_COACH_r2"></select></div></div>
+          <div class="row">
+            <label>Head Coach</label>
+            <input class="pname" id="edit_COACH_name" placeholder="Coach name"/>
+            <div class="pair"><select id="edit_COACH_t1"></select><select id="edit_COACH_r1"></select></div>
+          </div>
+          <div class="row">
+            <label>Coach Die 2</label>
+            <input class="pname" disabled value="—"/>
+            <div class="pair"><select id="edit_COACH_t2"></select><select id="edit_COACH_r2"></select></div>
+          </div>
         </div>
 
         <div class="editor-footer">
@@ -174,6 +282,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 

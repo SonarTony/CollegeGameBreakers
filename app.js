@@ -1,7 +1,7 @@
 // Gamebreakers College Football — League Manager + Play
+// Adds editable names for all players and coaches (Play + League).
 // Two dice per player (0–4 or "–"). Coach: two dice; Off/Def/–.
-// Defense slots: DL, LB, DB (no FLEX).
-// Now includes: seeded conferences, tiered randomization, and per-conference randomize buttons.
+// Defense slots: DL, LB, DB. Seeded conferences + tiered randomize.
 
 // ---------- Core tables ----------
 const OFF_TABLE = {
@@ -22,7 +22,7 @@ const OFF_SLOTS = ["QB","RB","WR","OL"];
 const DEF_SLOTS = ["DL","LB","DB"];
 
 // ---------- Utilities ----------
-const LS_KEY = "GBCF_LEAGUE_V2";
+const LS_KEY = "GBCF_LEAGUE_V3"; // bump for new schema with names
 function d6(){ return 1 + Math.floor(Math.random()*6); }
 function isDash(v){ return v === "-" || v === "–" || v === "" || v == null; }
 function toRating(v){ return isDash(v) ? null : Math.max(0, Math.min(4, v|0)); }
@@ -34,17 +34,13 @@ function pickWeighted(weights){
   return weights[weights.length-1].v;
 }
 
-function fillRatingSelect(sel){
-  sel.innerHTML = "";
-  [["-","–"],["0","0"],["1","1"],["2","2"],["3","3"],["4","4"]].forEach(([val,txt])=>{
-    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
-  });
-}
-function fillCoachTypeSelect(sel){
-  sel.innerHTML = "";
-  [["-","–"],["OFF","Off"],["DEF","Def"]].forEach(([val,txt])=>{
-    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
-  });
+// Tiny name generators (for fun/randomize)
+const FIRST = ["Jalen","Cade","DeShawn","Evan","Noah","Grant","Miles","Ty","Luca","Andre","Owen","Blake","Darius","Cole","Julian","Nate","Kendrick","Logan","Mason","Dillon","Ari","Trey","Roman","Xavier"];
+const LAST  = ["Hart","Lewis","Carter","Bishop","Reeves","Nguyen","Douglas","Price","Summers","Owens","Cruz","Wallace","Green","Higgins","Pierce","Foster","Sampson","Wolfe","King","Morrison","Sullivan","Brooks","Hayes"];
+function randName(){ return `${FIRST[Math.floor(Math.random()*FIRST.length)]} ${LAST[Math.floor(Math.random()*LAST.length)]}`; }
+function unitName(kind){ // OL/DL/LB/DB default "unit" names
+  const map = {OL:"Off Line", DL:"D-Line", LB:"Linebackers", DB:"Secondary"};
+  return map[kind] || kind;
 }
 
 // ---------- Team / League structures ----------
@@ -52,12 +48,17 @@ function defaultTeam(name){
   return {
     name,
     offense:{
-      QB:{o1:2,o2:null}, RB:{o1:2,o2:null}, WR:{o1:2,o2:null}, OL:{o1:2,o2:null}
+      QB:{ name:"", o1:2, o2:null },
+      RB:{ name:"", o1:2, o2:null },
+      WR:{ name:"", o1:2, o2:null },
+      OL:{ name:"", o1:2, o2:null }
     },
     defense:{
-      DL:{d1:2,d2:null}, LB:{d1:2,d2:null}, DB:{d1:2,d2:null}
+      DL:{ name:"", d1:2, d2:null },
+      LB:{ name:"", d1:2, d2:null },
+      DB:{ name:"", d1:2, d2:null }
     },
-    coach:{ t1:"-", r1:null, t2:"-", r2:null }
+    coach:{ name:"", t1:"-", r1:null, t2:"-", r2:null }
   };
 }
 
@@ -138,20 +139,28 @@ function randomTeamByTier(name, tier){
   const p = TIER_PROFILES[tier];
   const team = defaultTeam(name);
 
+  // names
+  team.offense.QB.name = randName();
+  team.offense.RB.name = randName();
+  team.offense.WR.name = randName();
+  team.offense.OL.name = unitName("OL");
+  team.defense.DL.name = unitName("DL");
+  team.defense.LB.name = unitName("LB");
+  team.defense.DB.name = unitName("DB");
+  team.coach.name = randName();
+
   // Offense
   OFF_SLOTS.forEach(s=>{
     team.offense[s].o1 = pickWeighted(p.ratingWeights);
     team.offense[s].o2 = randomDieByProfile(p, p.o2_present_p);
   });
-
   // Defense
   DEF_SLOTS.forEach(s=>{
     team.defense[s].d1 = pickWeighted(p.ratingWeights);
     team.defense[s].d2 = randomDieByProfile(p, p.d2_present_p);
   });
-
   // Coach
-  team.coach = randomCoachByProfile(p);
+  team.coach = { ...team.coach, ...randomCoachByProfile(p) };
   return team;
 }
 
@@ -198,6 +207,20 @@ function initTabs(){
   });
 }
 
+// ---------- Select helpers ----------
+function fillRatingSelect(sel){
+  sel.innerHTML = "";
+  [["-","–"],["0","0"],["1","1"],["2","2"],["3","3"],["4","4"]].forEach(([val,txt])=>{
+    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
+  });
+}
+function fillCoachTypeSelect(sel){
+  sel.innerHTML = "";
+  [["-","–"],["OFF","Off"],["DEF","Def"]].forEach(([val,txt])=>{
+    const opt = document.createElement("option"); opt.value = val; opt.textContent = txt; sel.appendChild(opt);
+  });
+}
+
 // ---------- PLAY: selects + UI ----------
 function fillAllPlaySelects(){
   const ids = [];
@@ -234,6 +257,14 @@ function neutralDefaultsPlay(){
     document.getElementById(`${side}_COACH_t2`).value="-";
     document.getElementById(`${side}_COACH_r1`).value="-";
     document.getElementById(`${side}_COACH_r2`).value="-";
+    document.getElementById(`${side}_QB_name`).value = "";
+    document.getElementById(`${side}_RB_name`).value = "";
+    document.getElementById(`${side}_WR_name`).value = "";
+    document.getElementById(`${side}_OL_name`).value = "";
+    document.getElementById(`${side}_DL_name`).value = "";
+    document.getElementById(`${side}_LB_name`).value = "";
+    document.getElementById(`${side}_DB_name`).value = "";
+    document.getElementById(`${side}_COACH_name`).value = "";
   });
   document.getElementById("homeLabel").textContent = "Home";
   document.getElementById("awayLabel").textContent = "Away";
@@ -255,6 +286,16 @@ function randomCoachType(){
   return "OFF";
 }
 function randomizeSide(side){
+  // names
+  document.getElementById(`${side}_QB_name`).value = randName();
+  document.getElementById(`${side}_RB_name`).value = randName();
+  document.getElementById(`${side}_WR_name`).value = randName();
+  document.getElementById(`${side}_OL_name`).value = unitName("OL");
+  document.getElementById(`${side}_DL_name`).value = unitName("DL");
+  document.getElementById(`${side}_LB_name`).value = unitName("LB");
+  document.getElementById(`${side}_DB_name`).value = unitName("DB");
+  document.getElementById(`${side}_COACH_name`).value = randName();
+
   OFF_SLOTS.forEach(slot=>{
     document.getElementById(`${side}_${slot}_o1`).value = randomPickOrDash(0.15);
     document.getElementById(`${side}_${slot}_o2`).value = randomPickOrDash(0.40);
@@ -277,6 +318,10 @@ function clearSide(side){
     document.getElementById(`${side}_${slot}_d1`).value = "-";
     document.getElementById(`${side}_${slot}_d2`).value = "-";
   });
+  ["QB","RB","WR","OL","DL","LB","DB"].forEach(s=>{
+    document.getElementById(`${side}_${s}_name`).value = "";
+  });
+  document.getElementById(`${side}_COACH_name`).value = "";
   document.getElementById(`${side}_COACH_t1`).value="-";
   document.getElementById(`${side}_COACH_t2`).value="-";
   document.getElementById(`${side}_COACH_r1`).value="-";
@@ -284,12 +329,13 @@ function clearSide(side){
   document.getElementById(`${side}Name`).value = side==="home"?"Home":"Away";
 }
 
-// Collect side config from Play UI
+// Collect side config from Play UI (names + dice)
 function collectSide(side){
   const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
   const offense = {};
   OFF_SLOTS.forEach(s=>{
     offense[s] = {
+      name: document.getElementById(`${side}_${s}_name`).value.trim(),
       o1: toRating(document.getElementById(`${side}_${s}_o1`).value),
       o2: toRating(document.getElementById(`${side}_${s}_o2`).value)
     };
@@ -297,11 +343,13 @@ function collectSide(side){
   const defense = {};
   DEF_SLOTS.forEach(s=>{
     defense[s] = {
+      name: document.getElementById(`${side}_${s}_name`).value.trim(),
       d1: toRating(document.getElementById(`${side}_${s}_d1`).value),
       d2: toRating(document.getElementById(`${side}_${s}_d2`).value)
     };
   });
   const coach = {
+    name: document.getElementById(`${side}_COACH_name`).value.trim(),
     t1: document.getElementById(`${side}_COACH_t1`).value,
     r1: toRating(document.getElementById(`${side}_COACH_r1`).value),
     t2: document.getElementById(`${side}_COACH_t2`).value,
@@ -314,13 +362,16 @@ function collectSide(side){
 function applyTeamToSide(team, side){
   document.getElementById(`${side}Name`).value = team.name || (side==="home"?"Home":"Away");
   OFF_SLOTS.forEach(s=>{
+    document.getElementById(`${side}_${s}_name`).value = team.offense[s].name || "";
     document.getElementById(`${side}_${s}_o1`).value = fromRating(team.offense[s].o1);
     document.getElementById(`${side}_${s}_o2`).value = fromRating(team.offense[s].o2);
   });
   DEF_SLOTS.forEach(s=>{
+    document.getElementById(`${side}_${s}_name`).value = team.defense[s].name || "";
     document.getElementById(`${side}_${s}_d1`).value = fromRating(team.defense[s].d1);
     document.getElementById(`${side}_${s}_d2`).value = fromRating(team.defense[s].d2);
   });
+  document.getElementById(`${side}_COACH_name`).value = team.coach.name || "";
   document.getElementById(`${side}_COACH_t1`).value = team.coach.t1 || "-";
   document.getElementById(`${side}_COACH_t2`).value = team.coach.t2 || "-";
   document.getElementById(`${side}_COACH_r1`).value = fromRating(team.coach.r1);
@@ -372,8 +423,8 @@ function rollCoach(coach){
   const offResults = []; const defResults = [];
   const doOne = (which, t, r)=>{
     if (t === "-" || r == null) return;
-    if (t === "OFF"){ const {face, pts} = rollOffDie(r); offResults.push({slot:"Coach", which, rating:r, face, pts}); }
-    else if (t === "DEF"){ const {face, code} = rollDefDie(r); defResults.push({slot:"Coach", which, rating:r, face, code}); }
+    if (t === "OFF"){ const {face, pts} = rollOffDie(r); offResults.push({slot:"Coach", which, rating:r, face, pts, name: coach.name}); }
+    else if (t === "DEF"){ const {face, code} = rollDefDie(r); defResults.push({slot:"Coach", which, rating:r, face, code, name: coach.name}); }
   };
   doOne("C1", coach.t1, coach.r1); doOne("C2", coach.t2, coach.r2);
   return { offResults, defResults };
@@ -381,16 +432,16 @@ function rollCoach(coach){
 function resolveSide(sideObj){
   const offResults = [];
   OFF_SLOTS.forEach(s=>{
-    const {o1,o2} = sideObj.offense[s];
-    if(o1!=null){ const r=rollOffDie(o1); offResults.push({slot:s,which:"O1",rating:o1,...r}); }
-    if(o2!=null){ const r=rollOffDie(o2); offResults.push({slot:s,which:"O2",rating:o2,...r}); }
+    const {name,o1,o2} = sideObj.offense[s];
+    if(o1!=null){ const r=rollOffDie(o1); offResults.push({slot:s,which:"O1",rating:o1,...r,name}); }
+    if(o2!=null){ const r=rollOffDie(o2); offResults.push({slot:s,which:"O2",rating:o2,...r,name}); }
   });
 
   const defResults = [];
   DEF_SLOTS.forEach(s=>{
-    const {d1,d2} = sideObj.defense[s];
-    if(d1!=null){ const r=rollDefDie(d1); defResults.push({slot:s,which:"D1",rating:d1,...r}); }
-    if(d2!=null){ const r=rollDefDie(d2); defResults.push({slot:s,which:"D2",rating:d2,...r}); }
+    const {name,d1,d2} = sideObj.defense[s];
+    if(d1!=null){ const r=rollDefDie(d1); defResults.push({slot:s,which:"D1",rating:d1,...r,name}); }
+    if(d2!=null){ const r=rollDefDie(d2); defResults.push({slot:s,which:"D2",rating:d2,...r,name}); }
   });
 
   const coachPack = rollCoach(sideObj.coach);
@@ -415,10 +466,10 @@ function finalizeScore(myDetail, oppDetail){
   return { final, cancel7, cancel3, canceledPoints };
 }
 function detailText(name, my, opp, fin){
-  const offLines = my.offResults.map(r=>`${r.slot}/${r.which}[${r.rating}] ${r.face}→${r.pts}`).join(", ");
+  const offLines = my.offResults.map(r=>`${r.slot}/${r.which}${r.name?` ${r.name}`:""} [${r.rating}] ${r.face}→${r.pts}`).join(", ");
   const defLines = my.defResults.map(r=>{
     const sym = r.code===1?"block":(r.code===7?"+7":(r.code===2?"+2":"0"));
-    return `${r.slot}/${r.which}[${r.rating}] ${r.face}→${sym}`;
+    return `${r.slot}/${r.which}${r.name?` ${r.name}`:""} [${r.rating}] ${r.face}→${sym}`;
   }).join(", ");
 
   return [
@@ -529,6 +580,13 @@ function setupEditorSelects(){
 function clearEditorSelection(){
   document.getElementById("editTeamTitle").textContent = "Select a team";
   document.getElementById("editTeamName").value = "";
+
+  // clear names
+  ["QB","RB","WR","OL","DL","LB","DB"].forEach(s=>{
+    const f = document.getElementById(`edit_${s}_name`); if (f) f.value = "";
+  });
+  const cn = document.getElementById("edit_COACH_name"); if (cn) cn.value = "";
+
   editorSelectIds().forEach(id=>{
     const el = document.getElementById(id);
     el.value = id.includes("_t") ? "-" : "-";
@@ -539,13 +597,16 @@ function loadTeamIntoEditor(team){
   document.getElementById("editTeamName").value = team.name;
 
   OFF_SLOTS.forEach(s=>{
+    document.getElementById(`edit_${s}_name`).value = team.offense[s].name || "";
     document.getElementById(`edit_${s}_o1`).value = fromRating(team.offense[s].o1);
     document.getElementById(`edit_${s}_o2`).value = fromRating(team.offense[s].o2);
   });
   DEF_SLOTS.forEach(s=>{
+    document.getElementById(`edit_${s}_name`).value = team.defense[s].name || "";
     document.getElementById(`edit_${s}_d1`).value = fromRating(team.defense[s].d1);
     document.getElementById(`edit_${s}_d2`).value = fromRating(team.defense[s].d2);
   });
+  document.getElementById("edit_COACH_name").value = team.coach.name || "";
   document.getElementById("edit_COACH_t1").value = team.coach.t1 || "-";
   document.getElementById("edit_COACH_t2").value = team.coach.t2 || "-";
   document.getElementById("edit_COACH_r1").value = fromRating(team.coach.r1);
@@ -558,13 +619,16 @@ function collectEditorToTeam(baseTeam){
   team.name = name;
 
   OFF_SLOTS.forEach(s=>{
+    team.offense[s].name = document.getElementById(`edit_${s}_name`).value.trim();
     team.offense[s].o1 = toRating(document.getElementById(`edit_${s}_o1`).value);
     team.offense[s].o2 = toRating(document.getElementById(`edit_${s}_o2`).value);
   });
   DEF_SLOTS.forEach(s=>{
+    team.defense[s].name = document.getElementById(`edit_${s}_name`).value.trim();
     team.defense[s].d1 = toRating(document.getElementById(`edit_${s}_d1`).value);
     team.defense[s].d2 = toRating(document.getElementById(`edit_${s}_d2`).value);
   });
+  team.coach.name = document.getElementById("edit_COACH_name").value.trim();
   team.coach.t1 = document.getElementById("edit_COACH_t1").value;
   team.coach.t2 = document.getElementById("edit_COACH_t2").value;
   team.coach.r1 = toRating(document.getElementById("edit_COACH_r1").value);
@@ -619,13 +683,28 @@ window.addEventListener("DOMContentLoaded", ()=>{
   });
 
   // LEAGUE setup
-  setupEditorSelects();
+  // Add name inputs to editor (already in HTML), now init selects:
+  editorSelectIds().forEach(id=>{
+    const el = document.getElementById(id);
+    if (id.includes("_t")) fillCoachTypeSelect(el);
+    else fillRatingSelect(el);
+  });
   renderLeagueSidebar();
   clearEditorSelection();
 
   // Editor buttons
   document.getElementById("editRandom").addEventListener("click", ()=>{
     if(selectedCI==null) return;
+    // random names
+    document.getElementById("edit_QB_name").value = randName();
+    document.getElementById("edit_RB_name").value = randName();
+    document.getElementById("edit_WR_name").value = randName();
+    document.getElementById("edit_OL_name").value = unitName("OL");
+    document.getElementById("edit_DL_name").value = unitName("DL");
+    document.getElementById("edit_LB_name").value = unitName("LB");
+    document.getElementById("edit_DB_name").value = unitName("DB");
+    document.getElementById("edit_COACH_name").value = randName();
+
     OFF_SLOTS.forEach(s=>{
       document.getElementById(`edit_${s}_o1`).value = randomPickOrDash(0.15);
       document.getElementById(`edit_${s}_o2`).value = randomPickOrDash(0.40);
@@ -643,13 +722,16 @@ window.addEventListener("DOMContentLoaded", ()=>{
   document.getElementById("editClear").addEventListener("click", ()=>{
     if(selectedCI==null) return;
     OFF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_name`).value = "";
       document.getElementById(`edit_${s}_o1`).value = "-";
       document.getElementById(`edit_${s}_o2`).value = "-";
     });
     DEF_SLOTS.forEach(s=>{
+      document.getElementById(`edit_${s}_name`).value = "";
       document.getElementById(`edit_${s}_d1`).value = "-";
       document.getElementById(`edit_${s}_d2`).value = "-";
     });
+    document.getElementById("edit_COACH_name").value = "";
     document.getElementById("edit_COACH_t1").value = "-";
     document.getElementById("edit_COACH_t2").value = "-";
     document.getElementById("edit_COACH_r1").value = "-";
@@ -702,6 +784,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // First visible roll
   playOne();
 });
+
 
 
 
