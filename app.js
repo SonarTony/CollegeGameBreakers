@@ -1,7 +1,6 @@
 // Gamebreakers College Football — League Manager + Play
-// Adds editable names + experience (FR/SO/JR/SR) for all players and coaches.
-// Two dice per player (0–4 or "–"). Coach: two dice; Off/Def/–.
-// Defense slots: DL, LB, DB. Seeded conferences + tiered randomize.
+// Experience (FR/SO/JR/SR), editable names, and NEW per-player breakdown UI.
+// Two dice per player (0–4 or "–"). Coach: two dice; Off/Def/–. Defense: DL, LB, DB.
 
 // ---------- Core tables ----------
 const OFF_TABLE = {
@@ -23,7 +22,7 @@ const DEF_SLOTS = ["DL","LB","DB"];
 const EXP_OPTIONS = ["FR","SO","JR","SR"];
 
 // ---------- Utilities ----------
-const LS_KEY = "GBCF_LEAGUE_V4"; // bumped for experience fields
+const LS_KEY = "GBCF_LEAGUE_V4"; // same as previous exp build
 function d6(){ return 1 + Math.floor(Math.random()*6); }
 function isDash(v){ return v === "-" || v === "–" || v === "" || v == null; }
 function toRating(v){ return isDash(v) ? null : Math.max(0, Math.min(4, v|0)); }
@@ -35,15 +34,10 @@ function pickWeighted(weights){
   return weights[weights.length-1].v;
 }
 function randOf(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-// Tiny name generators
 const FIRST = ["Jalen","Cade","DeShawn","Evan","Noah","Grant","Miles","Ty","Luca","Andre","Owen","Blake","Darius","Cole","Julian","Nate","Kendrick","Logan","Mason","Dillon","Ari","Trey","Roman","Xavier"];
 const LAST  = ["Hart","Lewis","Carter","Bishop","Reeves","Nguyen","Douglas","Price","Summers","Owens","Cruz","Wallace","Green","Higgins","Pierce","Foster","Sampson","Wolfe","King","Morrison","Sullivan","Brooks","Hayes"];
 function randName(){ return `${FIRST[Math.floor(Math.random()*FIRST.length)]} ${LAST[Math.floor(Math.random()*LAST.length)]}`; }
-function unitName(kind){
-  const map = {OL:"Off Line", DL:"D-Line", LB:"Linebackers", DB:"Secondary"};
-  return map[kind] || kind;
-}
+function unitName(kind){ const map = {OL:"Off Line", DL:"D-Line", LB:"Linebackers", DB:"Secondary"}; return map[kind] || kind; }
 function fillRatingSelect(sel){
   sel.innerHTML = "";
   [["-","–"],["0","0"],["1","1"],["2","2"],["3","3"],["4","4"]].forEach(([val,txt])=>{
@@ -65,17 +59,16 @@ function fillExpSelect(sel){
 
 // ---------- Team / League structures ----------
 function defaultTeam(name){
-  const blankO = (slot)=>({ name:"", exp:"FR", o1:2, o2:null });
-  const blankD = (slot)=>({ name:"", exp:"FR", d1:2, d2:null });
+  const blankO = ()=>({ name:"", exp:"FR", o1:2, o2:null });
+  const blankD = ()=>({ name:"", exp:"FR", d1:2, d2:null });
   return {
     name,
-    offense:{ QB:blankO("QB"), RB:blankO("RB"), WR:blankO("WR"), OL:blankO("OL") },
-    defense:{ DL:blankD("DL"), LB:blankD("LB"), DB:blankD("DB") },
+    offense:{ QB:blankO(), RB:blankO(), WR:blankO(), OL:blankO() },
+    defense:{ DL:blankD(), LB:blankD(), DB:blankD() },
     coach:{ name:"", exp:"JR", t1:"-", r1:null, t2:"-", r2:null }
   };
 }
 
-// --- Seeding: names + tiers ---
 const CONFERENCES = [
   { name: "Atlantic Premier",  tier: 1, teams: [
     "Coastal State Mariners","Bayview Tech Hawks","New Harbor University","Carolina Metro College",
@@ -109,15 +102,14 @@ const CONFERENCES = [
   ]}
 ];
 
-// --- Tiered randomization profiles ---
 const TIER_PROFILES = {
   1: {
     o2_present_p: 0.55, d2_present_p: 0.55,
     ratingWeights: [{v:0,w:5},{v:1,w:15},{v:2,w:40},{v:3,w:28},{v:4,w:12}],
     coachTypeWeights: [{v:"OFF",w:40},{v:"DEF",w:40},{v:"-",w:20}],
     coachRatingWeights: [{v:0,w:6},{v:1,w:18},{v:2,w:40},{v:3,w:26},{v:4,w:10}],
-    expWeights: [{v:"FR",w:20},{v:"SO",w:26},{v:"JR",w:30},{v:"SR",w:24}], // skew older
-    coachExpWeights: [{v:"FR",w:0},{v:"SO",w:8},{v:"JR",w:40},{v:"SR",w:52}]
+    expWeights: [{v:"FR",w:20},{v:"SO",w:26},{v:"JR",w:30},{v:"SR",w:24}],
+    coachExpWeights: [{v:"SO",w:8},{v:"JR",w:40},{v:"SR",w:52}]
   },
   2: {
     o2_present_p: 0.40, d2_present_p: 0.40,
@@ -132,15 +124,12 @@ const TIER_PROFILES = {
     ratingWeights: [{v:0,w:20},{v:1,w:35},{v:2,w:35},{v:3,w:9},{v:4,w:1}],
     coachTypeWeights: [{v:"OFF",w:28},{v:"DEF",w:28},{v:"-",w:44}],
     coachRatingWeights: [{v:0,w:22},{v:1,w:40},{v:2,w:28},{v:3,w:8},{v:4,w:2}],
-    expWeights: [{v:"FR",w:34},{v:"SO",w:32},{v:"JR",w:22},{v:"SR",w:12}], // skew younger
+    expWeights: [{v:"FR",w:34},{v:"SO",w:32},{v:"JR",w:22},{v:"SR",w:12}],
     coachExpWeights: [{v:"SO",w:36},{v:"JR",w:44},{v:"SR",w:20}]
   }
 };
 
-function randomDieByProfile(profile, present_p){
-  if (Math.random() > present_p) return null; // “–”
-  return pickWeighted(profile.ratingWeights);
-}
+function randomDieByProfile(profile, present_p){ if (Math.random() > present_p) return null; return pickWeighted(profile.ratingWeights); }
 function randomCoachByProfile(profile){
   const t1 = pickWeighted(profile.coachTypeWeights);
   const t2 = pickWeighted(profile.coachTypeWeights);
@@ -153,7 +142,6 @@ function randomTeamByTier(name, tier){
   const p = TIER_PROFILES[tier];
   const team = defaultTeam(name);
 
-  // names + exp
   team.offense.QB.name = randName(); team.offense.QB.exp = pickWeighted(p.expWeights);
   team.offense.RB.name = randName(); team.offense.RB.exp = pickWeighted(p.expWeights);
   team.offense.WR.name = randName(); team.offense.WR.exp = pickWeighted(p.expWeights);
@@ -167,17 +155,14 @@ function randomTeamByTier(name, tier){
   team.coach.name = randName();
   team.coach.exp = coachRoll.exp;
 
-  // Offense dice
   OFF_SLOTS.forEach(s=>{
     team.offense[s].o1 = pickWeighted(p.ratingWeights);
     team.offense[s].o2 = randomDieByProfile(p, p.o2_present_p);
   });
-  // Defense dice
   DEF_SLOTS.forEach(s=>{
     team.defense[s].d1 = pickWeighted(p.ratingWeights);
     team.defense[s].d2 = randomDieByProfile(p, p.d2_present_p);
   });
-  // Coach dice
   team.coach.t1 = coachRoll.t1; team.coach.r1 = coachRoll.r1;
   team.coach.t2 = coachRoll.t2; team.coach.r2 = coachRoll.r2;
 
@@ -190,7 +175,6 @@ function defaultLeague(){
     return { name: conf.name, tier: conf.tier, teams };
   });
 }
-
 function loadLeague(){
   try{
     const raw = localStorage.getItem(LS_KEY);
@@ -208,7 +192,6 @@ function loadLeague(){
   }
 }
 function saveLeague(league){ localStorage.setItem(LS_KEY, JSON.stringify(league)); }
-
 let LEAGUE = loadLeague();
 
 // ---------- Tabs ----------
@@ -227,24 +210,15 @@ function initTabs(){
   });
 }
 
-// ---------- PLAY: wiring ----------
+// ---------- PLAY: selects + defaults ----------
 function fillAllPlaySelects(){
   const ids = [];
-  OFF_SLOTS.forEach(s=>{
-    ids.push(`home_${s}_o1`,`home_${s}_o2`,`away_${s}_o1`,`away_${s}_o2`);
-  });
-  DEF_SLOTS.forEach(s=>{
-    ids.push(`home_${s}_d1`,`home_${s}_d2`,`away_${s}_d1`,`away_${s}_d2`);
-  });
+  OFF_SLOTS.forEach(s=>{ ids.push(`home_${s}_o1`,`home_${s}_o2`,`away_${s}_o1`,`away_${s}_o2`); });
+  DEF_SLOTS.forEach(s=>{ ids.push(`home_${s}_d1`,`home_${s}_d2`,`away_${s}_d1`,`away_${s}_d2`); });
   ids.forEach(id=> fillRatingSelect(document.getElementById(id)));
-  ["home_COACH_r1","home_COACH_r2","away_COACH_r1","away_COACH_r2"].forEach(id=>{
-    fillRatingSelect(document.getElementById(id));
-  });
-  ["home_COACH_t1","home_COACH_t2","away_COACH_t1","away_COACH_t2"].forEach(id=>{
-    fillCoachTypeSelect(document.getElementById(id));
-  });
+  ["home_COACH_r1","home_COACH_r2","away_COACH_r1","away_COACH_r2"].forEach(id=> fillRatingSelect(document.getElementById(id)));
+  ["home_COACH_t1","home_COACH_t2","away_COACH_t1","away_COACH_t2"].forEach(id=> fillCoachTypeSelect(document.getElementById(id)));
 
-  // experience selects
   const expIds = [];
   ["home","away"].forEach(side=>{
     [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=> expIds.push(`${side}_${s}_exp`));
@@ -276,10 +250,7 @@ function neutralDefaultsPlay(){
     document.getElementById(`${side}_COACH_r1`).value="-";
     document.getElementById(`${side}_COACH_r2`).value="-";
     document.getElementById(`${side}_COACH_exp`).value="JR";
-
-    ["QB","RB","WR","OL","DL","LB","DB"].forEach(p=>{
-      document.getElementById(`${side}_${p}_name`).value = "";
-    });
+    ["QB","RB","WR","OL","DL","LB","DB"].forEach(p=>{ document.getElementById(`${side}_${p}_name`).value = ""; });
     document.getElementById(`${side}_COACH_name`).value = "";
   });
   document.getElementById("homeLabel").textContent = "Home";
@@ -294,20 +265,8 @@ function randomPickOrDash(probDash){
   if (r < 0.95) return "3";
   return "4";
 }
-function randomCoachType(){
-  const r = Math.random();
-  if (r < 0.35) return "OFF";
-  if (r < 0.70) return "DEF";
-  if (r < 0.85) return "-";
-  return "OFF";
-}
-function randomExpByTier(tier){
-  // mirror the league random; if we don't know tier here, use neutral weights
-  const w = (TIER_PROFILES[tier]?.expWeights) || [{v:"FR",w:25},{v:"SO",w:25},{v:"JR",w:25},{v:"SR",w:25}];
-  return pickWeighted(w);
-}
+function randomCoachType(){ const r = Math.random(); if (r < 0.35) return "OFF"; if (r < 0.70) return "DEF"; if (r < 0.85) return "-"; return "OFF"; }
 function randomizeSide(side){
-  // names
   document.getElementById(`${side}_QB_name`).value = randName();
   document.getElementById(`${side}_RB_name`).value = randName();
   document.getElementById(`${side}_WR_name`).value = randName();
@@ -317,13 +276,9 @@ function randomizeSide(side){
   document.getElementById(`${side}_DB_name`).value = unitName("DB");
   document.getElementById(`${side}_COACH_name`).value = randName();
 
-  // exp (neutral distribution here)
-  [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=>{
-    document.getElementById(`${side}_${s}_exp`).value = randOf(EXP_OPTIONS);
-  });
+  [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=>{ document.getElementById(`${side}_${s}_exp`).value = randOf(EXP_OPTIONS); });
   document.getElementById(`${side}_COACH_exp`).value = randOf(["SO","JR","SR"]);
 
-  // dice
   OFF_SLOTS.forEach(slot=>{
     document.getElementById(`${side}_${slot}_o1`).value = randomPickOrDash(0.15);
     document.getElementById(`${side}_${slot}_o2`).value = randomPickOrDash(0.40);
@@ -348,9 +303,7 @@ function clearSide(side){
     document.getElementById(`${side}_${slot}_d2`).value = "-";
     document.getElementById(`${side}_${slot}_exp`).value = "FR";
   });
-  ["QB","RB","WR","OL","DL","LB","DB"].forEach(s=>{
-    document.getElementById(`${side}_${s}_name`).value = "";
-  });
+  ["QB","RB","WR","OL","DL","LB","DB"].forEach(s=>{ document.getElementById(`${side}_${s}_name`).value = ""; });
   document.getElementById(`${side}_COACH_name`).value = "";
   document.getElementById(`${side}_COACH_t1`).value="-";
   document.getElementById(`${side}_COACH_t2`).value="-";
@@ -360,10 +313,9 @@ function clearSide(side){
   document.getElementById(`${side}Name`).value = side==="home"?"Home":"Away";
 }
 
-// Collect side config from Play UI (names + exp + dice)
+// ---------- Collect/apply ----------
 function collectSide(side){
   const name = document.getElementById(`${side}Name`).value.trim() || (side==="home"?"Home":"Away");
-
   const offense = {};
   OFF_SLOTS.forEach(s=>{
     offense[s] = {
@@ -373,7 +325,6 @@ function collectSide(side){
       o2: toRating(document.getElementById(`${side}_${s}_o2`).value)
     };
   });
-
   const defense = {};
   DEF_SLOTS.forEach(s=>{
     defense[s] = {
@@ -383,7 +334,6 @@ function collectSide(side){
       d2: toRating(document.getElementById(`${side}_${s}_d2`).value)
     };
   });
-
   const coach = {
     name: document.getElementById(`${side}_COACH_name`).value.trim(),
     exp: document.getElementById(`${side}_COACH_exp`).value,
@@ -394,11 +344,8 @@ function collectSide(side){
   };
   return { name, offense, defense, coach };
 }
-
-// Apply a team object to a side (Play)
 function applyTeamToSide(team, side){
   document.getElementById(`${side}Name`).value = team.name || (side==="home"?"Home":"Away");
-
   OFF_SLOTS.forEach(s=>{
     document.getElementById(`${side}_${s}_name`).value = team.offense[s].name || "";
     document.getElementById(`${side}_${s}_exp`).value = team.offense[s].exp || "FR";
@@ -411,53 +358,39 @@ function applyTeamToSide(team, side){
     document.getElementById(`${side}_${s}_d1`).value = fromRating(team.defense[s].d1);
     document.getElementById(`${side}_${s}_d2`).value = fromRating(team.defense[s].d2);
   });
-
   document.getElementById(`${side}_COACH_name`).value = team.coach.name || "";
   document.getElementById(`${side}_COACH_exp`).value = team.coach.exp || "JR";
   document.getElementById(`${side}_COACH_t1`).value = team.coach.t1 || "-";
   document.getElementById(`${side}_COACH_t2`).value = team.coach.t2 || "-";
   document.getElementById(`${side}_COACH_r1`).value = fromRating(team.coach.r1);
   document.getElementById(`${side}_COACH_r2`).value = fromRating(team.coach.r2);
-
   document.getElementById(`${side}Label`).textContent = team.name || (side==="home"?"Home":"Away");
 }
 
-// ---------- Dice + Resolution ----------
-function rollOffDie(rating){
-  const face = d6();
-  const pts = OFF_TABLE[rating][face-1];
-  return { face, pts };
-}
-function rollDefDie(rating){
-  const face = d6();
-  const code = DEF_TABLE[rating][face-1]; // 1=block, 7=+7, 2=+2, 0
-  return { face, code };
-}
+// ---------- Dice + resolution ----------
+function rollOffDie(rating){ const face=d6(); const pts=OFF_TABLE[rating][face-1]; return { face, pts }; }
+function rollDefDie(rating){ const face=d6(); const code=DEF_TABLE[rating][face-1]; return { face, code }; }
 function rollCoach(coach){
-  const offResults = []; const defResults = [];
-  const doOne = (which, t, r)=>{
+  const offResults=[]; const defResults=[];
+  const doOne=(which,t,r)=>{
     if (t === "-" || r == null) return;
-    if (t === "OFF"){ const {face, pts} = rollOffDie(r); offResults.push({slot:"Coach", which, rating:r, face, pts, name: coach.name, exp: coach.exp}); }
-    else if (t === "DEF"){ const {face, code} = rollDefDie(r); defResults.push({slot:"Coach", which, rating:r, face, code, name: coach.name, exp: coach.exp}); }
+    if (t === "OFF"){ const {face, pts}=rollOffDie(r); offResults.push({slot:"Coach",which,rating:r,face,pts,name:coach.name,exp:coach.exp}); }
+    else if (t === "DEF"){ const {face, code}=rollDefDie(r); defResults.push({slot:"Coach",which,rating:r,face,code,name:coach.name,exp:coach.exp}); }
   };
-  doOne("C1", coach.t1, coach.r1); doOne("C2", coach.t2, coach.r2);
+  doOne("C1",coach.t1,coach.r1); doOne("C2",coach.t2,coach.r2);
   return { offResults, defResults };
 }
 function resolveSide(sideObj){
-  const offResults = [];
-  OFF_SLOTS.forEach(s=>{
-    const {name,exp,o1,o2} = sideObj.offense[s];
+  const offResults=[]; OFF_SLOTS.forEach(s=>{
+    const {name,exp,o1,o2}=sideObj.offense[s];
     if(o1!=null){ const r=rollOffDie(o1); offResults.push({slot:s,which:"O1",rating:o1,...r,name,exp}); }
     if(o2!=null){ const r=rollOffDie(o2); offResults.push({slot:s,which:"O2",rating:o2,...r,name,exp}); }
   });
-
-  const defResults = [];
-  DEF_SLOTS.forEach(s=>{
-    const {name,exp,d1,d2} = sideObj.defense[s];
+  const defResults=[]; DEF_SLOTS.forEach(s=>{
+    const {name,exp,d1,d2}=sideObj.defense[s];
     if(d1!=null){ const r=rollDefDie(d1); defResults.push({slot:s,which:"D1",rating:d1,...r,name,exp}); }
     if(d2!=null){ const r=rollDefDie(d2); defResults.push({slot:s,which:"D2",rating:d2,...r,name,exp}); }
   });
-
   const coachPack = rollCoach(sideObj.coach);
   const offAll = offResults.concat(coachPack.offResults);
   const defAll = defResults.concat(coachPack.defResults);
@@ -479,25 +412,87 @@ function finalizeScore(myDetail, oppDetail){
   const final = Math.max(0, myDetail.ownBase - canceledPoints) + myDetail.bonus;
   return { final, cancel7, cancel3, canceledPoints };
 }
-function detailText(name, my, opp, fin){
-  const offLines = my.offResults.map(r=>`${r.slot}/${r.which}${r.name?` ${r.name}`:""}${r.exp?` (${r.exp})`:""} [${r.rating}] ${r.face}→${r.pts}`).join(", ");
-  const defLines = my.defResults.map(r=>{
-    const sym = r.code===1?"block":(r.code===7?"+7":(r.code===2?"+2":"0"));
-    return `${r.slot}/${r.which}${r.name?` ${r.name}`:""}${r.exp?` (${r.exp})`:""} [${r.rating}] ${r.face}→${sym}`;
-  }).join(", ");
 
-  return [
-    `Off dice: ${offLines || "—"}`,
-    `Def dice: ${defLines || "—"}`,
-    `Own offense before blocks: ${my.ownBase}`,
-    `Opponent blocks used: ${opp.blocks} (−${fin.canceledPoints} = ${fin.cancel7}×7 + ${fin.cancel3}×3)`,
-    `Defense bonus added: +${my.bonus}`,
-  ].join("\n");
+// ---------- New: clean breakdown rendering ----------
+function pill(text, type){
+  const cls = type || "neu";
+  return `<span class="pill ${cls}">${text}</span>`;
 }
+function offPill(face, pts){
+  // 7 (green), 3 (yellow), 0 (neutral)
+  return pill(`d6:${face} → ${pts}`, pts===7?"ok":(pts===3?"warn":"neu"));
+}
+function defPill(face, code){
+  // block=bad (red) for opponent; bonus (7/2)=ok; 0=neutral
+  const label = code===1?"block":(code===7?"+7":(code===2?"+2":"0"));
+  const t = code===1?"bad":(code===7||code===2?"ok":"neu");
+  return pill(`d6:${face} → ${label}`, t);
+}
+function groupByPlayer(results, isOff){
+  // key: slot+which+name (but we want merge O1/O2 of same slot/name)
+  const map = new Map();
+  for(const r of results){
+    const key = `${r.slot}|${r.name||""}|${r.exp||""}`;
+    if(!map.has(key)) map.set(key, { slot:r.slot, name:r.name||"", exp:r.exp||"", items:[] });
+    map.get(key).items.push(isOff ? {face:r.face, pts:r.pts, rating:r.rating, which:r.which}
+                                  : {face:r.face, code:r.code, rating:r.rating, which:r.which});
+  }
+  return [...map.values()];
+}
+function sectionHTML(title, small, playersHTML){
+  return `
+    <div class="break-section">
+      <div class="break-header">
+        <h4>${title}</h4>
+        <span class="small-muted">${small}</span>
+      </div>
+      ${playersHTML}
+    </div>
+  `;
+}
+function playersHTML(rows, isOff){
+  if(rows.length===0) return `<div class="small-muted">—</div>`;
+  return rows.map(p=>{
+    const id = `
+      <div class="player-id">
+        <span class="badge">${p.slot}</span>
+        <strong>${p.name || p.slot}</strong>
+        <span class="badge">${p.exp || ""}</span>
+      </div>`;
+    const pills = p.items.map(it=>{
+      return isOff ? offPill(it.face, it.pts) : defPill(it.face, it.code);
+    }).join("");
+    return `<div class="player-row">
+      ${id}
+      <div class="pills">${pills}</div>
+    </div>`;
+  }).join("");
+}
+function buildBreakdownHTML(sideName, detail, oppDetail, fin){
+  const offGrouped = groupByPlayer(detail.offResults, true);
+  const defGrouped = groupByPlayer(detail.defResults, false);
+
+  const offSec = sectionHTML(
+    "Offense Dice",
+    `7s: ${detail.own7} • 3s: ${detail.own3} • Base: ${detail.ownBase}`,
+    playersHTML(offGrouped, true)
+  );
+  const defSec = sectionHTML(
+    "Defense Dice",
+    `Blocks: ${detail.blocks} • Bonus: +${detail.bonus}`,
+    playersHTML(defGrouped, false)
+  );
+
+  const summary = `Base ${detail.ownBase} − blocks ${fin.canceledPoints} + defense bonus ${detail.bonus}`;
+
+  const body = `<div class="breakdown">${offSec}${defSec}</div>`;
+  return { summary, body };
+}
+
+// ---------- Play a game ----------
 function playOne(){
   const home = collectSide("home");
   const away = collectSide("away");
-
   document.getElementById("homeLabel").textContent = home.name;
   document.getElementById("awayLabel").textContent = away.name;
 
@@ -509,8 +504,14 @@ function playOne(){
   document.getElementById("homeScore").textContent = hf.final;
   document.getElementById("awayScore").textContent = af.final;
 
-  document.getElementById("homeDetail").textContent = detailText(home.name, h, a, hf);
-  document.getElementById("awayDetail").textContent = detailText(away.name, a, h, af);
+  const hRender = buildBreakdownHTML(home.name, h, a, hf);
+  const aRender = buildBreakdownHTML(away.name, a, h, af);
+
+  document.getElementById("homeSummary").textContent = hRender.summary;
+  document.getElementById("awaySummary").textContent = aRender.summary;
+
+  document.getElementById("homeDetail").innerHTML = hRender.body;
+  document.getElementById("awayDetail").innerHTML = aRender.body;
 
   const log = document.getElementById("log");
   const ev = document.createElement("div");
@@ -522,8 +523,8 @@ function playOne(){
 }
 
 // ---------- League Manager UI ----------
-let selectedCI = null; // conference index
-let selectedTI = null; // team index
+let selectedCI = null;
+let selectedTI = null;
 
 function renderLeagueSidebar(){
   const box = document.getElementById("leagueSidebar");
@@ -539,9 +540,7 @@ function renderLeagueSidebar(){
     const btnRnd = document.createElement("button");
     btnRnd.className = "ghost";
     btnRnd.textContent = "🎲 Randomize Conference";
-    btnRnd.addEventListener("click", ()=>{
-      randomizeConference(ci);
-    });
+    btnRnd.addEventListener("click", ()=>{ randomizeConference(ci); });
     mini.appendChild(btnRnd);
     title.appendChild(mini);
     block.appendChild(title);
@@ -549,8 +548,7 @@ function renderLeagueSidebar(){
     conf.teams.forEach((t, ti)=>{
       const item = document.createElement("div");
       item.className = "team-item";
-      item.dataset.ci = ci;
-      item.dataset.ti = ti;
+      item.dataset.ci = ci; item.dataset.ti = ti;
       item.innerHTML = `<span>${t.name}</span><small>#${ti+1}</small>`;
       if (ci===selectedCI && ti===selectedTI) item.classList.add("active");
       item.addEventListener("click", ()=>{
@@ -560,11 +558,9 @@ function renderLeagueSidebar(){
       });
       block.appendChild(item);
     });
-
     box.appendChild(block);
   });
 }
-
 function randomizeConference(ci){
   const conf = LEAGUE[ci];
   const tier = conf.tier || 3;
@@ -576,7 +572,6 @@ function randomizeConference(ci){
     loadTeamIntoEditor(conf.teams[selectedTI]);
   }
 }
-
 function editorSelectIds(){
   const ids = [];
   OFF_SLOTS.forEach(s=>{ ids.push(`edit_${s}_o1`,`edit_${s}_o2`); });
@@ -596,30 +591,22 @@ function setupEditorSelects(){
     if (id.includes("_t")) fillCoachTypeSelect(el);
     else fillRatingSelect(el);
   });
-  editorExpIds().forEach(id=>{
-    fillExpSelect(document.getElementById(id));
-  });
+  editorExpIds().forEach(id=> fillExpSelect(document.getElementById(id)));
 }
 function clearEditorSelection(){
   document.getElementById("editTeamTitle").textContent = "Select a team";
   document.getElementById("editTeamName").value = "";
-
   ["QB","RB","WR","OL","DL","LB","DB"].forEach(s=>{
     const f = document.getElementById(`edit_${s}_name`); if (f) f.value = "";
     const e = document.getElementById(`edit_${s}_exp`); if (e) e.value = "FR";
   });
   const cn = document.getElementById("edit_COACH_name"); if (cn) cn.value = "";
   const ce = document.getElementById("edit_COACH_exp"); if (ce) ce.value = "JR";
-
-  editorSelectIds().forEach(id=>{
-    const el = document.getElementById(id);
-    el.value = id.includes("_t") ? "-" : "-";
-  });
+  editorSelectIds().forEach(id=>{ const el = document.getElementById(id); el.value = id.includes("_t") ? "-" : "-"; });
 }
 function loadTeamIntoEditor(team){
   document.getElementById("editTeamTitle").textContent = team.name;
   document.getElementById("editTeamName").value = team.name;
-
   OFF_SLOTS.forEach(s=>{
     document.getElementById(`edit_${s}_name`).value = team.offense[s].name || "";
     document.getElementById(`edit_${s}_exp`).value = team.offense[s].exp || "FR";
@@ -643,7 +630,6 @@ function collectEditorToTeam(baseTeam){
   const name = document.getElementById("editTeamName").value.trim() || baseTeam.name;
   const team = JSON.parse(JSON.stringify(baseTeam));
   team.name = name;
-
   OFF_SLOTS.forEach(s=>{
     team.offense[s].name = document.getElementById(`edit_${s}_name`).value.trim();
     team.offense[s].exp  = document.getElementById(`edit_${s}_exp`).value;
@@ -662,11 +648,10 @@ function collectEditorToTeam(baseTeam){
   team.coach.t2   = document.getElementById("edit_COACH_t2").value;
   team.coach.r1   = toRating(document.getElementById("edit_COACH_r1").value);
   team.coach.r2   = toRating(document.getElementById("edit_COACH_r2").value);
-
   return team;
 }
 
-// ---------- Team pickers + persistence ----------
+// ---------- Team pickers ----------
 function refreshTeamPickers(){
   const lists = [document.getElementById("pickHomeTeam"), document.getElementById("pickAwayTeam")];
   lists.forEach(sel=>{
@@ -694,42 +679,13 @@ function setTeamByIndexStr(indexStr, teamObj){
   saveLeague(LEAGUE);
 }
 
-// ---------- Game resolution ----------
-function playOne(){
-  const home = collectSide("home");
-  const away = collectSide("away");
-
-  document.getElementById("homeLabel").textContent = home.name;
-  document.getElementById("awayLabel").textContent = away.name;
-
-  const h = resolveSide(home);
-  const a = resolveSide(away);
-  const hf = finalizeScore(h, a);
-  const af = finalizeScore(a, h);
-
-  document.getElementById("homeScore").textContent = hf.final;
-  document.getElementById("awayScore").textContent = af.final;
-
-  document.getElementById("homeDetail").textContent = detailText(home.name, h, a, hf);
-  document.getElementById("awayDetail").textContent = detailText(away.name, a, h, af);
-
-  const log = document.getElementById("log");
-  const ev = document.createElement("div");
-  ev.className = "event";
-  const verdict = hf.final>af.final ? `${home.name} win` : hf.final<af.final ? `${away.name} win` : "Tie";
-  ev.innerHTML = `<strong>${home.name} ${hf.final} — ${af.final} ${away.name}</strong> <em>${verdict}</em>`;
-  log.prepend(ev);
-  while (log.children.length > 40) log.removeChild(log.lastChild);
-}
-
 // ---------- Wire up ----------
 window.addEventListener("DOMContentLoaded", ()=>{
   initTabs();
 
-  // PLAY setup
+  // PLAY
   fillAllPlaySelects();
   neutralDefaultsPlay();
-
   document.getElementById("homeRandom").addEventListener("click", ()=>randomizeSide("home"));
   document.getElementById("homeClear").addEventListener("click", ()=>clearSide("home"));
   document.getElementById("awayRandom").addEventListener("click", ()=>randomizeSide("away"));
@@ -737,45 +693,33 @@ window.addEventListener("DOMContentLoaded", ()=>{
   document.getElementById("bothRandom").addEventListener("click", ()=>{ randomizeSide("home"); randomizeSide("away"); });
   document.getElementById("rollAll").addEventListener("click", playOne);
 
-  // Team pickers
   refreshTeamPickers();
   document.getElementById("btnLoadHome").addEventListener("click", ()=>{
-    const id = document.getElementById("pickHomeTeam").value;
-    if(!id) return;
-    const team = getTeamByIndexStr(id);
-    applyTeamToSide(team, "home");
+    const id = document.getElementById("pickHomeTeam").value; if(!id) return;
+    const team = getTeamByIndexStr(id); applyTeamToSide(team, "home");
   });
   document.getElementById("btnLoadAway").addEventListener("click", ()=>{
-    const id = document.getElementById("pickAwayTeam").value;
-    if(!id) return;
-    const team = getTeamByIndexStr(id);
-    applyTeamToSide(team, "away");
+    const id = document.getElementById("pickAwayTeam").value; if(!id) return;
+    const team = getTeamByIndexStr(id); applyTeamToSide(team, "away");
   });
-
   document.getElementById("btnSaveHomeBack").addEventListener("click", ()=>{
-    const sel = document.getElementById("pickHomeTeam").value;
-    if(!sel) return;
-    const team = collectSide("home");
-    setTeamByIndexStr(sel, team);
+    const sel = document.getElementById("pickHomeTeam").value; if(!sel) return;
+    const team = collectSide("home"); setTeamByIndexStr(sel, team);
     renderLeagueSidebar(); refreshTeamPickers();
   });
   document.getElementById("btnSaveAwayBack").addEventListener("click", ()=>{
-    const sel = document.getElementById("pickAwayTeam").value;
-    if(!sel) return;
-    const team = collectSide("away");
-    setTeamByIndexStr(sel, team);
+    const sel = document.getElementById("pickAwayTeam").value; if(!sel) return;
+    const team = collectSide("away"); setTeamByIndexStr(sel, team);
     renderLeagueSidebar(); refreshTeamPickers();
   });
 
-  // LEAGUE setup
+  // LEAGUE
   setupEditorSelects();
   renderLeagueSidebar();
   clearEditorSelection();
 
-  // Editor buttons
   document.getElementById("editRandom").addEventListener("click", ()=>{
     if(selectedCI==null) return;
-    // random names + exp
     document.getElementById("edit_QB_name").value = randName();
     document.getElementById("edit_RB_name").value = randName();
     document.getElementById("edit_WR_name").value = randName();
@@ -784,14 +728,11 @@ window.addEventListener("DOMContentLoaded", ()=>{
     document.getElementById("edit_LB_name").value = unitName("LB");
     document.getElementById("edit_DB_name").value = unitName("DB");
     document.getElementById("edit_COACH_name").value = randName();
-
-    editorExpIds().forEach(id=>{
+    [...editorExpIds()].forEach(id=>{
       const el = document.getElementById(id);
       if(id==="edit_COACH_exp") el.value = randOf(["SO","JR","SR"]);
       else el.value = randOf(EXP_OPTIONS);
     });
-
-    // dice
     OFF_SLOTS.forEach(s=>{
       document.getElementById(`edit_${s}_o1`).value = randomPickOrDash(0.15);
       document.getElementById(`edit_${s}_o2`).value = randomPickOrDash(0.40);
@@ -838,7 +779,6 @@ window.addEventListener("DOMContentLoaded", ()=>{
     loadTeamIntoEditor(updated);
   });
 
-  // Export / Import / Reset / Randomize All
   document.getElementById("exportLeague").addEventListener("click", ()=>{
     const blob = new Blob([JSON.stringify(LEAGUE, null, 2)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
