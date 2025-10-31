@@ -53,6 +53,10 @@ select{
 .pname{
   background:#0f1122; color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:.35rem .5rem; width:180px;
 }
+.pexp{
+  background:#0f1122; color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:.35rem .4rem; width:130px;
+}
+.who{ display:flex; gap:.4rem; align-items:center; }
 
 .controls{
   display:flex; gap:.6rem; align-items:center; justify-content:center; margin:1rem 0;
@@ -121,6 +125,7 @@ button.primary:hover{ filter:brightness(1.05); }
   .play-loader{ grid-template-columns:1fr; }
   .league-wrap{ grid-template-columns:1fr; }
 }
+
 
 
 
