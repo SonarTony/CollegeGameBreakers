@@ -12,6 +12,7 @@
   <nav class="tabs">
     <button class="tab active" data-tab="play">Play</button>
     <button class="tab" data-tab="league">League Manager</button>
+    <button class="tab" data-tab="season">Season</button>
   </nav>
 </header>
 
@@ -354,6 +355,32 @@
     </div>
   </section>
 
+  <!-- SEASON TAB -->
+  <section id="tab-season" class="tabpanel">
+    <div class="season-wrap">
+      <section class="season-controls">
+        <div class="picker">
+          <label>Week:</label>
+          <select id="seasonWeek"></select>
+          <button class="primary" id="btnSimWeek">Simulate Week</button>
+          <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
+          <button class="ghost" id="btnResetSeason">Reset Season</button>
+        </div>
+      </section>
+
+      <section class="season-body">
+        <div class="games-panel">
+          <h3>Games</h3>
+          <div id="gamesList" class="games-list"></div>
+        </div>
+        <div class="standings-panel">
+          <h3>Standings</h3>
+          <div id="standingsAll"></div>
+        </div>
+      </section>
+    </div>
+  </section>
+
 </main>
 
 <footer class="app-footer">
@@ -363,6 +390,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
