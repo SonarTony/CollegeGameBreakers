@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gamebreakers College Football</title>
-  <link rel="stylesheet" href="styles.css?v=3"/>
+  <link rel="stylesheet" href="styles.css?v=1"/>
 </head>
 <body>
 <header class="app-header">
@@ -231,7 +231,7 @@
           <button class="primary" id="btnSimWeek">Simulate Week</button>
           <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
           <button class="ghost" id="btnResetSeason">Reset Season</button>
-          <button class="ghost" id="btnSaveSeasonHistory">Save Season to History</button>
+          <button class="ghost" id="btnSaveSeasonToHistory">Save Season</button>
         </div>
       </section>
 
@@ -240,20 +240,23 @@
           <h3>Games</h3>
           <div id="gamesList" class="games-list"></div>
         </div>
+
         <div class="standings-panel">
           <h3>Standings</h3>
           <div id="standingsAll"></div>
-        </div>
 
-        <div class="postseason-panel">
-          <h3>Postseason Bowls & Playoffs</h3>
+          <!-- POSTSEASON -->
+          <div class="postseason-panel">
+            <h3>Postseason Bowls & Playoffs</h3>
 
-          <div class="ps-controls">
-            <button class="primary" id="btnGenPostseason">Generate Bowls</button>
-            <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
+            <!-- keep only generate/reset here; section play buttons live inside sections -->
+            <div class="ps-controls">
+              <button class="primary" id="btnGenPostseason">Generate Bowls</button>
+              <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
+            </div>
+
+            <div id="postseasonView"></div>
           </div>
-
-          <div id="postseasonView"></div>
         </div>
       </section>
     </div>
@@ -261,22 +264,24 @@
 
   <!-- HISTORY -->
   <section id="tab-history" class="tabpanel">
-    <div class="history-wrap">
-      <div class="history-controls">
-        <label for="historySelect">View:</label>
-        <select id="historySelect"></select>
-
-        <button class="ghost" id="btnExportHistory">Export History JSON</button>
-
-        <label class="importer">
-          <input type="file" id="importHistoryFile" accept=".json" hidden />
-          <span class="ghost buttonlike">Import History JSON</span>
-        </label>
-
-        <button class="ghost" id="btnClearHistory">Delete All History</button>
-      </div>
-
-      <div id="historyView"></div>
+    <div class="season-wrap">
+      <section class="season-controls">
+        <div class="picker">
+          <label>View:</label>
+          <select id="historySelect"></select>
+          <button class="ghost" id="btnHistoryAddSeason">Save Current Season</button>
+          <button class="ghost" id="btnExportHistory">Export History</button>
+          <label class="importer">
+            <input type="file" id="importHistoryFile" accept=".json" hidden />
+            <span class="ghost buttonlike">Import History</span>
+          </label>
+          <button class="ghost" id="btnClearHistory">Delete All History</button>
+        </div>
+      </section>
+      <section class="games-panel">
+        <h3 id="historyTitle">Totals</h3>
+        <div id="historyContent"></div>
+      </section>
     </div>
   </section>
 </main>
@@ -286,7 +291,7 @@
 </footer>
 
 <!-- Modules -->
-<script type="module" src="./js/main.js?v=4"></script>
+<script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
 
