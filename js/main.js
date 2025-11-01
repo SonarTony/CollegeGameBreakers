@@ -1,5 +1,5 @@
 // js/main.js
-// Entry point for tabs, Play/League/Season wiring, Postseason controls, and History.
+// Entry point for tabs, Play/League/Season wiring, Postseason controls, and History (export/import).
 
 import { OFF_SLOTS, DEF_SLOTS, LS_HISTORY } from "./constants.js";
 import { loadLeague } from "./league.js";
@@ -57,31 +57,58 @@ let SEASON = null;
 /* =========================
    HISTORY: helpers
 ========================= */
+const HISTORY_KEY = LS_HISTORY || "GBCF_HISTORY_V1";
+
 function loadHistory(){
-  const raw = localStorage.getItem(LS_HISTORY);
+  const raw = localStorage.getItem(HISTORY_KEY);
   if(!raw) return { seasons: [] };
   try { return JSON.parse(raw) || { seasons: [] }; }
   catch(e){ return { seasons: [] }; }
 }
 
 function saveHistory(hist){
-  localStorage.setItem(LS_HISTORY, JSON.stringify(hist));
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
 }
 
 function clearHistory(){
-  localStorage.removeItem(LS_HISTORY);
+  localStorage.removeItem(HISTORY_KEY);
+}
+
+function downloadJSON(filename, dataObj){
+  const str = JSON.stringify(dataObj, null, 2);
+  const blob = new Blob([str], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }, 0);
+}
+
+function exportHistoryJSON(){
+  const hist = loadHistory();
+  const now = new Date();
+  const pad = (n)=> String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const fname = `gbcf_history_${stamp}.json`;
+  downloadJSON(fname, hist);
+}
+
+/**
+ * Minimal schema check: object with .seasons being an array
+ */
+function validateHistorySchema(obj){
+  return obj && typeof obj === "object" && Array.isArray(obj.seasons);
 }
 
 /**
  * Build a snapshot of the finished (or current) season so it can be shown later.
- * Stores:
- *  - label: "Season N" (auto) or carries SEASON.year if present
- *  - standings: per-team W/L/PF/PA
- *  - postseason summary: bowl appearances, champion
- *  - per-team season counts: bowls, championships for that season
  */
 function buildSeasonSnapshot(SEASON){
-  // Label
   const hist = loadHistory();
   const seasonNumber = (hist.seasons?.length || 0) + 1;
   const label = SEASON?.year ? `Season ${SEASON.year}` : `Season ${seasonNumber}`;
@@ -106,12 +133,10 @@ function buildSeasonSnapshot(SEASON){
   };
 
   if(ps){
-    // any bowl appearance counts
     (ps.bowlsInitial||[]).forEach(b=>{
       addTeam(b.home).bowls++;
       addTeam(b.away).bowls++;
     });
-    // quarters/semis/championship appearances (count as bowls, too)
     (ps.quarters||[]).forEach(m=>{ addTeam(m.home).bowls++; addTeam(m.away).bowls++; });
     (ps.semis||[]).forEach(m=>{ addTeam(m.home).bowls++; addTeam(m.away).bowls++; });
     if(ps.championship){
@@ -123,7 +148,6 @@ function buildSeasonSnapshot(SEASON){
     }
   }
 
-  // Expand team names alongside standings for easier viewing later
   const teams = {};
   Object.keys(standings).forEach(k=>{
     const [ci,ti] = k.split(":").map(n=>parseInt(n,10));
@@ -157,14 +181,10 @@ function buildSeasonSnapshot(SEASON){
         winner: ps.championship.winner
       } : null
     } : null,
-    seasonTeamMeta // bowls/champ for this season
+    seasonTeamMeta
   };
 }
 
-/**
- * Compute Totals table across all saved seasons:
- *  per team: name, total W, L, Bowls, Championships
- */
 function computeTotals(history){
   const totals = {}; // key ci:ti
   const addTeam = (k, name)=>{
@@ -172,7 +192,6 @@ function computeTotals(history){
     return totals[k];
   };
   (history.seasons||[]).forEach(s=>{
-    // Wins/Losses sum from s.standings
     Object.keys(s.standings).forEach(k=>{
       const rec = s.standings[k];
       const nm = s.teams[k]?.name || "(Unknown)";
@@ -180,7 +199,6 @@ function computeTotals(history){
       row.w += rec.w || 0;
       row.l += rec.l || 0;
     });
-    // Bowls/Championships from seasonTeamMeta
     Object.keys(s.seasonTeamMeta||{}).forEach(k=>{
       const st = s.seasonTeamMeta[k];
       const row = addTeam(k, st.name);
@@ -188,7 +206,6 @@ function computeTotals(history){
       row.champ += st.champ || 0;
     });
   });
-  // Convert to array and sort by Champ, Bowls, W
   const arr = Object.keys(totals).map(k=>({ key:k, ...totals[k] }));
   arr.sort((a,b)=> (b.champ - a.champ) || (b.bowls - a.bowls) || (b.w - a.w) || a.name.localeCompare(b.name));
   return arr;
@@ -276,9 +293,6 @@ function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
   document.getElementById("awayDetail").innerHTML = aRender.body;
 }
 
-/**
- * Play or Rewatch a scheduled season game.
- */
 function playScheduledGame(g, {replay=false}={}){
   const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
   const awayTeam = JSON.parse(JSON.stringify(getTeam(g.away.ci, g.away.ti)));
@@ -418,7 +432,6 @@ function wirePostseasonButtons(){
     });
   }
 
-  // Section control buttons are rendered inside #postseasonView; delegate clicks there.
   const pv = document.getElementById("postseasonView");
   if (pv){
     pv.addEventListener("click", (e)=>{
@@ -455,7 +468,7 @@ function wirePostseasonButtons(){
     });
   }
 
-  // Per-game handlers exposed globally (Bowls, Quarters, Semis, Champ)
+  // Per-game handlers
   window.playBowlById = (id)=>{
     const ps = SEASON.postseason; if(!ps) return;
     const b = ps.bowlsInitial.find(x=>x.id===id); if(!b) return;
@@ -597,14 +610,14 @@ function wirePostseasonButtons(){
 }
 
 /* =========================
-   HISTORY: rendering & wiring
+   HISTORY: rendering, import & wiring
 ========================= */
 function renderHistoryTab(){
   const hist = loadHistory();
   const select = document.getElementById("historySelect");
   const view = document.getElementById("historyView");
 
-  // Build dropdown: "Totals" + each season label (newest first)
+  // Build dropdown: "Totals" + each season label
   select.innerHTML = "";
   const optTotals = document.createElement("option");
   optTotals.value = "TOTALS";
@@ -613,25 +626,72 @@ function renderHistoryTab(){
 
   const seasons = [...(hist.seasons||[])];
   seasons.forEach((s, idx)=>{
-    // keep order oldest->newest in dropdown if desired; we can append in order added
     const opt = document.createElement("option");
-    opt.value = `S:${idx}`; // index in hist.seasons
+    opt.value = `S:${idx}`;
     opt.textContent = s.label || `Season ${idx+1}`;
     select.appendChild(opt);
   });
 
   select.onchange = ()=> renderHistoryView(select.value, hist, view);
-  // default: Totals
   select.value = "TOTALS";
   renderHistoryView("TOTALS", hist, view);
 
-  // wire delete all
+  // wire delete + export
   const btnDel = document.getElementById("btnClearHistory");
   if(btnDel){
     btnDel.onclick = ()=>{
       if(!confirm("Delete ALL saved history? This cannot be undone.")) return;
       clearHistory();
-      renderHistoryTab(); // refresh
+      renderHistoryTab();
+    };
+  }
+
+  const btnExport = document.getElementById("btnExportHistory");
+  if(btnExport){
+    btnExport.onclick = ()=> exportHistoryJSON();
+  }
+
+  // wire import
+  const inputImport = document.getElementById("importHistoryFile");
+  if(inputImport){
+    inputImport.onchange = async (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if(!file) return;
+
+      try{
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if(!validateHistorySchema(data)){
+          alert("Invalid history file. Expected an object with a 'seasons' array.");
+          inputImport.value = "";
+          return;
+        }
+
+        const existing = loadHistory();
+        let merged;
+
+        if((existing.seasons||[]).length > 0){
+          const doAppend = confirm("Append imported seasons to existing history?\nOK = Append, Cancel = Replace");
+          if(doAppend){
+            merged = { seasons: [...existing.seasons, ...data.seasons] };
+          }else{
+            merged = { seasons: [...data.seasons] };
+          }
+        }else{
+          merged = { seasons: [...data.seasons] };
+        }
+
+        saveHistory(merged);
+        alert(`Imported ${data.seasons.length} season(s) successfully.`);
+        // Refresh the view
+        renderHistoryTab();
+      }catch(err){
+        console.error(err);
+        alert("Failed to import history. Ensure it's a valid JSON file.");
+      }finally{
+        inputImport.value = "";
+      }
     };
   }
 }
@@ -665,7 +725,6 @@ function renderHistoryView(which, hist, view){
     return;
   }
 
-  // Specific season recap
   const idx = parseInt(which.split(":")[1],10);
   const s = (hist.seasons||[])[idx];
   if(!s){
@@ -673,7 +732,6 @@ function renderHistoryView(which, hist, view){
     return;
   }
 
-  // Standings table
   const sRows = Object.keys(s.standings).map(k=>{
     const rec = s.standings[k];
     const nm = s.teams[k]?.name || k;
@@ -681,20 +739,17 @@ function renderHistoryView(which, hist, view){
     return `<tr><td>${nm}</td><td>${rec.w}</td><td>${rec.l}</td><td>${rec.pf}</td><td>${rec.pa}</td><td>${diff>=0?'+':''}${diff}</td></tr>`;
   }).join("");
 
-  // Champion (if any)
   let champLine = `<em>No champion recorded.</em>`;
   if(s.postseason?.championship?.winner){
     const wref = s.postseason.championship.winner;
     champLine = `<strong>Champion:</strong> ${getTeam(wref.ci, wref.ti).name}`;
-  }
+    }
 
-  // Bowls played count (appearances) for this season
   const metaRows = Object.keys(s.seasonTeamMeta||{}).map(k=>{
     const st = s.seasonTeamMeta[k];
     return `<tr><td>${st.name}</td><td>${st.bowls||0}</td><td>${st.champ||0}</td></tr>`;
   }).join("");
 
-  // Render recap
   view.innerHTML = `
     <div class="history-grid">
       <div class="history-section">
@@ -752,4 +807,5 @@ window.addEventListener("DOMContentLoaded", ()=>{
   renderPostseason(SEASON);
   wirePostseasonButtons();
 });
+
 
