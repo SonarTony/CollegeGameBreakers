@@ -1,7 +1,7 @@
 import { OFF_SLOTS, DEF_SLOTS } from "./constants.js";
 import { fromRating, toRating } from "./rng.js";
 import { randomTeamByTier, loadLeague, saveLeague, CONFERENCES } from "./league.js";
-import { fillRatingSelect, fillCoachTypeSelect, fillExpSelect } from "./ui_play.js";
+import { fillRatingSelect, fillCoachTypeSelect, fillExpSelect, fillCoachYearsSelect } from "./ui_play.js";
 
 export let LEAGUE = loadLeague();
 let selectedCI = null, selectedTI = null;
@@ -82,8 +82,19 @@ export function setupEditorSelects(){
   DEF_SLOTS.forEach(s=>{ ids.push(`edit_${s}_d1`,`edit_${s}_d2`); });
   ids.push("edit_COACH_t1","edit_COACH_r1","edit_COACH_t2","edit_COACH_r2");
   ids.forEach(id=>{ const el=document.getElementById(id); if(id.includes("_t")) fillCoachTypeSelect(el); else fillRatingSelect(el); });
-  const expIds=[]; [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=> expIds.push(`edit_${s}_exp`)); expIds.push("edit_COACH_exp");
+
+  // Players keep FR/SO/JR/SR
+  const expIds=[]; [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=> expIds.push(`edit_${s}_exp`));
   expIds.forEach(id=> fillExpSelect(document.getElementById(id)));
+
+  // Coach uses years (1–6)
+  fillCoachYearsSelect(document.getElementById("edit_COACH_exp"));
+}
+
+function normalizeCoachExp(val){
+  const n = parseInt(val, 10);
+  if (!Number.isNaN(n) && n >= 1 && n <= 6) return String(n);
+  return "3";
 }
 
 export function clearEditorSelection(){
@@ -94,7 +105,7 @@ export function clearEditorSelection(){
     const e = document.getElementById(`edit_${s}_exp`); if (e) e.value = "FR";
   });
   const cn = document.getElementById("edit_COACH_name"); if (cn) cn.value = "";
-  const ce = document.getElementById("edit_COACH_exp"); if (ce) ce.value = "JR";
+  const ce = document.getElementById("edit_COACH_exp"); if (ce) ce.value = "3";
   [...["QB","RB","WR","OL"].flatMap(s=>[`edit_${s}_o1`,`edit_${s}_o2`]),
      ...["DL","LB","DB"].flatMap(s=>[`edit_${s}_d1`,`edit_${s}_d2`]),
      "edit_COACH_t1","edit_COACH_r1","edit_COACH_t2","edit_COACH_r2"
@@ -117,7 +128,7 @@ export function loadTeamIntoEditor(team){
     document.getElementById(`edit_${s}_d2`).value = fromRating(team.defense[s].d2);
   });
   document.getElementById("edit_COACH_name").value = team.coach.name || "";
-  document.getElementById("edit_COACH_exp").value = team.coach.exp || "JR";
+  document.getElementById("edit_COACH_exp").value = normalizeCoachExp(team.coach.exp);
   document.getElementById("edit_COACH_t1").value = team.coach.t1 || "-";
   document.getElementById("edit_COACH_t2").value = team.coach.t2 || "-";
   document.getElementById("edit_COACH_r1").value = fromRating(team.coach.r1);
@@ -141,7 +152,7 @@ export function collectEditorToTeam(baseTeam){
     team.defense[s].d2   = toRating(document.getElementById(`edit_${s}_d2`).value);
   });
   team.coach.name = document.getElementById("edit_COACH_name").value.trim();
-  team.coach.exp  = document.getElementById("edit_COACH_exp").value;
+  team.coach.exp  = normalizeCoachExp(document.getElementById("edit_COACH_exp").value);
   team.coach.t1   = document.getElementById("edit_COACH_t1").value;
   team.coach.t2   = document.getElementById("edit_COACH_t2").value;
   team.coach.r1   = toRating(document.getElementById("edit_COACH_r1").value);
@@ -165,7 +176,7 @@ export function wireLeagueEditor(){
       document.getElementById(`edit_${s}_d2`).value = "-";
     });
     document.getElementById("edit_COACH_name").value = "";
-    document.getElementById("edit_COACH_exp").value = "JR";
+    document.getElementById("edit_COACH_exp").value = "3";
     document.getElementById("edit_COACH_t1").value = "-";
     document.getElementById("edit_COACH_t2").value = "-";
     document.getElementById("edit_COACH_r1").value = "-";
@@ -184,7 +195,7 @@ export function wireLeagueEditor(){
       });
     });
     document.getElementById("edit_COACH_name").value = "";
-    document.getElementById("edit_COACH_exp").value = "JR";
+    document.getElementById("edit_COACH_exp").value = "3";
     document.getElementById("edit_COACH_t1").value = "-";
     document.getElementById("edit_COACH_t2").value = "-";
     document.getElementById("edit_COACH_r1").value = "-";

@@ -21,6 +21,22 @@ export function fillExpSelect(sel){
   });
 }
 
+// NEW: Coach years (1–6)
+export function fillCoachYearsSelect(sel){
+  sel.innerHTML = "";
+  ["1","2","3","4","5","6"].forEach(v=>{
+    const opt = document.createElement("option"); opt.value = v; opt.textContent = v; sel.appendChild(opt);
+  });
+}
+
+// Helper: normalize coach exp for backward compatibility
+function normalizeCoachExp(val){
+  const n = parseInt(val, 10);
+  if (!Number.isNaN(n) && n >= 1 && n <= 6) return String(n);
+  // Old saves might have "FR/SO/JR/SR" or blanks — default sensibly
+  return "3";
+}
+
 export function fillAllPlaySelects(){
   const ids = [];
   OFF_SLOTS.forEach(s=>{ ids.push(`home_${s}_o1`,`home_${s}_o2`,`away_${s}_o1`,`away_${s}_o2`); });
@@ -28,10 +44,15 @@ export function fillAllPlaySelects(){
   ids.forEach(id=> fillRatingSelect(document.getElementById(id)));
   ["home_COACH_r1","home_COACH_r2","away_COACH_r1","away_COACH_r2"].forEach(id=> fillRatingSelect(document.getElementById(id)));
   ["home_COACH_t1","home_COACH_t2","away_COACH_t1","away_COACH_t2"].forEach(id=> fillCoachTypeSelect(document.getElementById(id)));
+
+  // Players keep FR/SO/JR/SR
   const expIds = []; ["home","away"].forEach(side=>{
     [...OFF_SLOTS, ...DEF_SLOTS].forEach(s=> expIds.push(`${side}_${s}_exp`));
-    expIds.push(`${side}_COACH_exp`);
-  }); expIds.forEach(id => fillExpSelect(document.getElementById(id)));
+  });
+  expIds.forEach(id => fillExpSelect(document.getElementById(id)));
+
+  // Coaches now use 1–6 years
+  ["home_COACH_exp","away_COACH_exp"].forEach(id=> fillCoachYearsSelect(document.getElementById(id)));
 }
 
 export function neutralDefaultsPlay(){
@@ -57,7 +78,8 @@ export function neutralDefaultsPlay(){
     document.getElementById(`${side}_COACH_t2`).value="-";
     document.getElementById(`${side}_COACH_r1`).value="-";
     document.getElementById(`${side}_COACH_r2`).value="-";
-    document.getElementById(`${side}_COACH_exp`).value="JR";
+    // Default coaches to 3 years
+    document.getElementById(`${side}_COACH_exp`).value="3";
     ["QB","RB","WR","OL","DL","LB","DB"].forEach(p=>{ document.getElementById(`${side}_${p}_name`).value = ""; });
     document.getElementById(`${side}_COACH_name`).value = "";
   });
@@ -76,6 +98,9 @@ function randomPickOrDash(probDash){
 }
 function randomCoachType(){ const r = Math.random(); if (r < 0.35) return "OFF"; if (r < 0.70) return "DEF"; if (r < 0.85) return "-"; return "OFF"; }
 
+// NEW: random coach years 1–6 (uniform)
+function randomCoachYears(){ return String(1 + Math.floor(Math.random()*6)); }
+
 export function randomizeSide(side){
   document.getElementById(`${side}_QB_name`).value = "";
   document.getElementById(`${side}_RB_name`).value = "";
@@ -86,10 +111,10 @@ export function randomizeSide(side){
   document.getElementById(`${side}_DB_name`).value = "Secondary";
   document.getElementById(`${side}_COACH_name`).value = "";
 
-  [...["QB","RB","WR","OL","DL","LB","DB"].map(p=>`${side}_${p}_exp`), `${side}_COACH_exp`]
+  [...["QB","RB","WR","OL","DL","LB","DB"].map(p=>`${side}_${p}_exp`)]
     .forEach(id=>{
       const el = document.getElementById(id);
-      el.value = id.endsWith("_COACH_exp") ? "JR" : randOf(["FR","SO","JR","SR"]);
+      el.value = randOf(["FR","SO","JR","SR"]);
     });
 
   ["QB","RB","WR","OL"].forEach(slot=>{
@@ -105,6 +130,8 @@ export function randomizeSide(side){
   document.getElementById(`${side}_COACH_t2`).value = randomCoachType();
   document.getElementById(`${side}_COACH_r1`).value = randomPickOrDash(0.20);
   document.getElementById(`${side}_COACH_r2`).value = randomPickOrDash(0.35);
+  // NEW: coach years
+  document.getElementById(`${side}_COACH_exp`).value = randomCoachYears();
 }
 
 export function clearSide(side){
@@ -125,7 +152,8 @@ export function clearSide(side){
   document.getElementById(`${side}_COACH_t2`).value="-";
   document.getElementById(`${side}_COACH_r1`).value="-";
   document.getElementById(`${side}_COACH_r2`).value="-";
-  document.getElementById(`${side}_COACH_exp`).value="JR";
+  // NEW default coach years
+  document.getElementById(`${side}_COACH_exp`).value="3";
   document.getElementById(`${side}Name`).value = side==="home"?"Home":"Away";
 }
 
@@ -151,7 +179,8 @@ export function collectSide(side){
   });
   const coach = {
     name: document.getElementById(`${side}_COACH_name`).value.trim(),
-    exp: document.getElementById(`${side}_COACH_exp`).value,
+    // store years (string "1"-"6")
+    exp: normalizeCoachExp(document.getElementById(`${side}_COACH_exp`).value),
     t1: document.getElementById(`${side}_COACH_t1`).value,
     r1: toRating(document.getElementById(`${side}_COACH_r1`).value),
     t2: document.getElementById(`${side}_COACH_t2`).value,
@@ -175,7 +204,8 @@ export function applyTeamToSide(team, side){
     document.getElementById(`${side}_${s}_d2`).value = fromRating(team.defense[s].d2);
   });
   document.getElementById(`${side}_COACH_name`).value = team.coach.name || "";
-  document.getElementById(`${side}_COACH_exp`).value = team.coach.exp || "JR";
+  // normalize old saves to years
+  document.getElementById(`${side}_COACH_exp`).value = normalizeCoachExp(team.coach.exp);
   document.getElementById(`${side}_COACH_t1`).value = team.coach.t1 || "-";
   document.getElementById(`${side}_COACH_t2`).value = team.coach.t2 || "-";
   document.getElementById(`${side}_COACH_r1`).value = fromRating(team.coach.r1);
@@ -219,12 +249,12 @@ export function buildBreakdownHTML(detail, oppDetail, fin){
   const defGrouped = groupByPlayer(detail.defResults, false);
   const offSec = sectionHTML("Offense Dice", `7s: ${detail.own7} • 3s: ${detail.own3} • Base: ${detail.ownBase}`, playersHTML(offGrouped, true));
   const defSec = sectionHTML("Defense Dice", `Blocks: ${detail.blocks} • Bonus: +${detail.bonus}`, playersHTML(defGrouped, false));
-  const summary = `Base ${detail.ownBase} − blocks ${fin.canceledPoints} + defense bonus ${detail.bonus}`;
+  const summary = `Base ${detail.ownBase} − blocks (3s→7s) ${fin.canceledPoints} + defense bonus ${detail.bonus}`;
   const body = `<div class="breakdown">${offSec}${defSec}</div>`;
   return { summary, body };
 }
 
-// ------- Play tab wiring (unchanged) -------
+// ------- Play tab wiring -------
 
 export function wirePlayTab(tieLogFn){
   document.getElementById("rollAll").addEventListener("click", ()=>{
@@ -270,4 +300,5 @@ export function tieLogToPanel(line){
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
 }
+
 

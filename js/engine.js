@@ -43,11 +43,16 @@ export function resolveSide(sideObj){
   return { offResults:offAll, defResults:defAll, own7, own3, ownBase, blocks, bonus };
 }
 
+/**
+ * Final scoring with NEW block priority:
+ * - Blocks MUST cancel all 3-point results before any 7-point results.
+ */
 export function finalizeScore(myDetail, oppDetail){
-  const cancel7 = Math.min(myDetail.own7, oppDetail.blocks);
-  const rem = oppDetail.blocks - cancel7;
-  const cancel3 = Math.min(myDetail.own3, rem);
-  const canceledPoints = cancel7*7 + cancel3*3;
+  // Opponent's blocks apply to my offense.
+  const cancel3 = Math.min(myDetail.own3, oppDetail.blocks);
+  const rem = oppDetail.blocks - cancel3;
+  const cancel7 = Math.min(myDetail.own7, rem);
+  const canceledPoints = cancel3*3 + cancel7*7;
   const final = Math.max(0, myDetail.ownBase - canceledPoints) + myDetail.bonus;
   return { final, cancel7, cancel3, canceledPoints };
 }
@@ -56,6 +61,10 @@ export function finalizeScore(myDetail, oppDetail){
 function sumDefBonus(defResults){
   return defResults.reduce((a,r)=> a + (r.code===7 ? 7 : (r.code===2 ? 2 : 0)), 0);
 }
+
+/**
+ * Coach-only delta with NEW block priority (3s cancelled before 7s).
+ */
 function coachTiebreakDelta(myCoachPack, oppCoachPack){
   const myOff = myCoachPack.offResults;
   const myDef = myCoachPack.defResults;
@@ -67,10 +76,11 @@ function coachTiebreakDelta(myCoachPack, oppCoachPack){
 
   const oppBlocks = oppDef.filter(r=>r.code===1).length;
 
-  const cancel7 = Math.min(my7, oppBlocks);
-  const remainingBlocks = oppBlocks - cancel7;
-  const cancel3 = Math.min(my3, remainingBlocks);
-  const canceled = cancel7*7 + cancel3*3;
+  // NEW ORDER: cancel 3s first, then 7s
+  const cancel3 = Math.min(my3, oppBlocks);
+  const remainingBlocks = oppBlocks - cancel3;
+  const cancel7 = Math.min(my7, remainingBlocks);
+  const canceled = cancel3*3 + cancel7*7;
 
   const offenseDelta = Math.max(0, myBase - canceled);
   const defenseBonus = sumDefBonus(myDef);
