@@ -35,12 +35,16 @@ export function renderGames(SEASON){
   w.games.forEach((g, idx)=>{
     const row = document.createElement("div");
     row.className = "game-row" + (g.played ? " played":"");
+
     const names = document.createElement("div");
     names.className = "game-names";
     names.textContent = gameLabel(g);
+
     const score = document.createElement("div");
     score.className = "game-score";
-    score.textContent = g.played ? `${g.score.home}–${g.score.away}` : "—";
+    // FIX: display scores as visitor–home to match "visitor @ home"
+    score.textContent = g.played ? `${g.score.away}–${g.score.home}` : "—";
+
     const actions = document.createElement("div");
     actions.className = "game-actions";
 
@@ -50,7 +54,9 @@ export function renderGames(SEASON){
     btn.addEventListener("click", ()=> window.playScheduledGame(g, {replay: g.played}));
     actions.appendChild(btn);
 
-    row.appendChild(names); row.appendChild(score); row.appendChild(actions);
+    row.appendChild(names);
+    row.appendChild(score);
+    row.appendChild(actions);
     wrap.appendChild(row);
   });
 }
@@ -187,4 +193,5 @@ export function renderPostseason(SEASON){
     });
   });
 }
+
 
