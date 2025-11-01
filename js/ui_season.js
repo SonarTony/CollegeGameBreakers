@@ -42,7 +42,7 @@ export function renderGames(SEASON){
 
     const score = document.createElement("div");
     score.className = "game-score";
-    // FIX: display scores as visitor–home to match "visitor @ home"
+    // Display scores as visitor–home to match "visitor @ home"
     score.textContent = g.played ? `${g.score.away}–${g.score.home}` : "—";
 
     const actions = document.createElement("div");
@@ -79,7 +79,8 @@ export function teamNameOf(ref){
 
 function bowlRowHTML(b){
   const names = `${teamNameOf(b.away)} @ ${teamNameOf(b.home)}`;
-  const scr = b.played ? `${b.score.home}–${b.score.away}` : "—";
+  // FIX: show bowl scores as visitor–home
+  const scr = b.played ? `${b.score.away}–${b.score.home}` : "—";
   const klass = "ps-item" + (b.played ? " played":"");
   const chip = b.playoff ? `<span class="chip pl">Playoff</span>` : `<span class="chip nb">Non-Playoff</span>`;
   const btn = `<button data-bowl="${b.id}">${b.played?"Rewatch":"Play"}</button>`;
@@ -193,5 +194,6 @@ export function renderPostseason(SEASON){
     });
   });
 }
+
 
 
