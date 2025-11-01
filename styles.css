@@ -175,6 +175,19 @@ button.primary:hover{ filter:brightness(1.05); }
   .season-body{ grid-template-columns:1fr; }
 }
 
+.postseason-panel{margin-top:1rem;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.8rem}
+.ps-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.6rem}
+.ps-stage{border:1px dashed var(--line);border-radius:10px;padding:.6rem;margin:.5rem 0;background:#0f1122}
+.ps-stage h4{margin:0 0 .4rem 0;color:var(--accent)}
+.ps-list{display:grid;gap:.4rem}
+.ps-item{display:grid;grid-template-columns:1fr auto auto;gap:.5rem;align-items:center;padding:.45rem .6rem;border:1px solid var(--line);border-radius:10px;background:#0f1126}
+.ps-item.played{opacity:.9}
+.ps-score{font-weight:700}
+.badge.round{margin-left:.5rem;font-size:.75rem;padding:.1rem .4rem;border:1px solid var(--line);border-radius:999px;color:#cfd6ff;background:#121535}
+.chip{display:inline-block;font-size:.75rem;padding:.12rem .45rem;border-radius:999px;border:1px solid var(--line);margin-left:.4rem}
+.chip.pl{background:#112a18;border-color:#1d4d31;color:#bff3d4}
+.chip.nb{background:#2a2311;border-color:#5a4b1e;color:#ffeab2}
+
 
 
 
