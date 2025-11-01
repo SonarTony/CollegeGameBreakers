@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Gamebreakers College Football — League</title>
-  <link rel="stylesheet" href="styles.css"/>
+  <title>Gamebreakers College Football</title>
+  <link rel="stylesheet" href="styles.css?v=1"/>
 </head>
 <body>
 <header class="app-header">
@@ -17,8 +17,7 @@
 </header>
 
 <main class="container">
-
-  <!-- PLAY TAB -->
+  <!-- PLAY -->
   <section id="tab-play" class="tabpanel active">
     <div class="play-loader">
       <div class="picker">
@@ -45,83 +44,48 @@
             <button class="ghost" id="homeClear">Clear</button>
           </div>
         </div>
-
         <div class="gb-grid">
           <h3>Offense</h3>
           <div class="row">
-            <label>QB</label>
-            <div class="who">
-              <input class="pname" id="home_QB_name" placeholder="QB name"/>
-              <select class="pexp" id="home_QB_exp"></select>
-            </div>
+            <label>QB</label><div class="who"><input class="pname" id="home_QB_name"/><select class="pexp" id="home_QB_exp"></select></div>
             <div class="pair"><select id="home_QB_o1"></select><select id="home_QB_o2"></select></div>
           </div>
           <div class="row">
-            <label>RB</label>
-            <div class="who">
-              <input class="pname" id="home_RB_name" placeholder="RB name"/>
-              <select class="pexp" id="home_RB_exp"></select>
-            </div>
+            <label>RB</label><div class="who"><input class="pname" id="home_RB_name"/><select class="pexp" id="home_RB_exp"></select></div>
             <div class="pair"><select id="home_RB_o1"></select><select id="home_RB_o2"></select></div>
           </div>
           <div class="row">
-            <label>WR</label>
-            <div class="who">
-              <input class="pname" id="home_WR_name" placeholder="WR name"/>
-              <select class="pexp" id="home_WR_exp"></select>
-            </div>
+            <label>WR</label><div class="who"><input class="pname" id="home_WR_name"/><select class="pexp" id="home_WR_exp"></select></div>
             <div class="pair"><select id="home_WR_o1"></select><select id="home_WR_o2"></select></div>
           </div>
           <div class="row">
-            <label>OL</label>
-            <div class="who">
-              <input class="pname" id="home_OL_name" placeholder="OL unit name"/>
-              <select class="pexp" id="home_OL_exp"></select>
-            </div>
+            <label>OL</label><div class="who"><input class="pname" id="home_OL_name"/><select class="pexp" id="home_OL_exp"></select></div>
             <div class="pair"><select id="home_OL_o1"></select><select id="home_OL_o2"></select></div>
           </div>
 
           <h3>Defense</h3>
           <div class="row">
-            <label>DL</label>
-            <div class="who">
-              <input class="pname" id="home_DL_name" placeholder="DL unit name"/>
-              <select class="pexp" id="home_DL_exp"></select>
-            </div>
+            <label>DL</label><div class="who"><input class="pname" id="home_DL_name"/><select class="pexp" id="home_DL_exp"></select></div>
             <div class="pair"><select id="home_DL_d1"></select><select id="home_DL_d2"></select></div>
           </div>
           <div class="row">
-            <label>LB</label>
-            <div class="who">
-              <input class="pname" id="home_LB_name" placeholder="LB unit name"/>
-              <select class="pexp" id="home_LB_exp"></select>
-            </div>
+            <label>LB</label><div class="who"><input class="pname" id="home_LB_name"/><select class="pexp" id="home_LB_exp"></select></div>
             <div class="pair"><select id="home_LB_d1"></select><select id="home_LB_d2"></select></div>
           </div>
           <div class="row">
-            <label>DB</label>
-            <div class="who">
-              <input class="pname" id="home_DB_name" placeholder="DB unit name"/>
-              <select class="pexp" id="home_DB_exp"></select>
-            </div>
+            <label>DB</label><div class="who"><input class="pname" id="home_DB_name"/><select class="pexp" id="home_DB_exp"></select></div>
             <div class="pair"><select id="home_DB_d1"></select><select id="home_DB_d2"></select></div>
           </div>
 
           <h3>Coach</h3>
           <div class="row">
             <label>Head Coach</label>
-            <div class="who">
-              <input class="pname" id="home_COACH_name" placeholder="Coach name"/>
-              <select class="pexp" id="home_COACH_exp"></select>
-            </div>
+            <div class="who"><input class="pname" id="home_COACH_name"/><select class="pexp" id="home_COACH_exp"></select></div>
             <div class="pair"><select id="home_COACH_t1"></select><select id="home_COACH_r1"></select></div>
           </div>
           <div class="row">
             <label>Coach Die 2</label>
-            <div class="who">
-              <input class="pname" disabled value="—"/>
-              <select class="pexp" disabled></select>
-            </div>
+            <div class="who"><input class="pname" disabled value="—"/><select class="pexp" disabled></select></div>
             <div class="pair"><select id="home_COACH_t2"></select><select id="home_COACH_r2"></select></div>
           </div>
         </div>
@@ -138,83 +102,48 @@
             <button class="ghost" id="awayClear">Clear</button>
           </div>
         </div>
-
         <div class="gb-grid">
           <h3>Offense</h3>
           <div class="row">
-            <label>QB</label>
-            <div class="who">
-              <input class="pname" id="away_QB_name" placeholder="QB name"/>
-              <select class="pexp" id="away_QB_exp"></select>
-            </div>
+            <label>QB</label><div class="who"><input class="pname" id="away_QB_name"/><select class="pexp" id="away_QB_exp"></select></div>
             <div class="pair"><select id="away_QB_o1"></select><select id="away_QB_o2"></select></div>
           </div>
           <div class="row">
-            <label>RB</label>
-            <div class="who">
-              <input class="pname" id="away_RB_name" placeholder="RB name"/>
-              <select class="pexp" id="away_RB_exp"></select>
-            </div>
+            <label>RB</label><div class="who"><input class="pname" id="away_RB_name"/><select class="pexp" id="away_RB_exp"></select></div>
             <div class="pair"><select id="away_RB_o1"></select><select id="away_RB_o2"></select></div>
           </div>
           <div class="row">
-            <label>WR</label>
-            <div class="who">
-              <input class="pname" id="away_WR_name" placeholder="WR name"/>
-              <select class="pexp" id="away_WR_exp"></select>
-            </div>
+            <label>WR</label><div class="who"><input class="pname" id="away_WR_name"/><select class="pexp" id="away_WR_exp"></select></div>
             <div class="pair"><select id="away_WR_o1"></select><select id="away_WR_o2"></select></div>
           </div>
           <div class="row">
-            <label>OL</label>
-            <div class="who">
-              <input class="pname" id="away_OL_name" placeholder="OL unit name"/>
-              <select class="pexp" id="away_OL_exp"></select>
-            </div>
+            <label>OL</label><div class="who"><input class="pname" id="away_OL_name"/><select class="pexp" id="away_OL_exp"></select></div>
             <div class="pair"><select id="away_OL_o1"></select><select id="away_OL_o2"></select></div>
           </div>
 
           <h3>Defense</h3>
           <div class="row">
-            <label>DL</label>
-            <div class="who">
-              <input class="pname" id="away_DL_name" placeholder="DL unit name"/>
-              <select class="pexp" id="away_DL_exp"></select>
-            </div>
+            <label>DL</label><div class="who"><input class="pname" id="away_DL_name"/><select class="pexp" id="away_DL_exp"></select></div>
             <div class="pair"><select id="away_DL_d1"></select><select id="away_DL_d2"></select></div>
           </div>
           <div class="row">
-            <label>LB</label>
-            <div class="who">
-              <input class="pname" id="away_LB_name" placeholder="LB unit name"/>
-              <select class="pexp" id="away_LB_exp"></select>
-            </div>
+            <label>LB</label><div class="who"><input class="pname" id="away_LB_name"/><select class="pexp" id="away_LB_exp"></select></div>
             <div class="pair"><select id="away_LB_d1"></select><select id="away_LB_d2"></select></div>
           </div>
           <div class="row">
-            <label>DB</label>
-            <div class="who">
-              <input class="pname" id="away_DB_name" placeholder="DB unit name"/>
-              <select class="pexp" id="away_DB_exp"></select>
-            </div>
+            <label>DB</label><div class="who"><input class="pname" id="away_DB_name"/><select class="pexp" id="away_DB_exp"></select></div>
             <div class="pair"><select id="away_DB_d1"></select><select id="away_DB_d2"></select></div>
           </div>
 
           <h3>Coach</h3>
           <div class="row">
             <label>Head Coach</label>
-            <div class="who">
-              <input class="pname" id="away_COACH_name" placeholder="Coach name"/>
-              <select class="pexp" id="away_COACH_exp"></select>
-            </div>
+            <div class="who"><input class="pname" id="away_COACH_name"/><select class="pexp" id="away_COACH_exp"></select></div>
             <div class="pair"><select id="away_COACH_t1"></select><select id="away_COACH_r1"></select></div>
           </div>
           <div class="row">
             <label>Coach Die 2</label>
-            <div class="who">
-              <input class="pname" disabled value="—"/>
-              <select class="pexp" disabled></select>
-            </div>
+            <div class="who"><input class="pname" disabled value="—"/><select class="pexp" disabled></select></div>
             <div class="pair"><select id="away_COACH_t2"></select><select id="away_COACH_r2"></select></div>
           </div>
         </div>
@@ -244,11 +173,10 @@
     <section class="log" id="log"></section>
   </section>
 
-  <!-- LEAGUE TAB -->
+  <!-- LEAGUE -->
   <section id="tab-league" class="tabpanel">
     <div class="league-wrap">
       <aside class="league-sidebar" id="leagueSidebar"></aside>
-
       <section class="league-editor">
         <div class="editor-head">
           <div class="title">
@@ -264,82 +192,19 @@
 
         <div class="gb-grid">
           <h3>Offense</h3>
-          <div class="row">
-            <label>QB</label>
-            <div class="who">
-              <input class="pname" id="edit_QB_name" placeholder="QB name"/>
-              <select class="pexp" id="edit_QB_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_QB_o1"></select><select id="edit_QB_o2"></select></div>
-          </div>
-          <div class="row">
-            <label>RB</label>
-            <div class="who">
-              <input class="pname" id="edit_RB_name" placeholder="RB name"/>
-              <select class="pexp" id="edit_RB_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_RB_o1"></select><select id="edit_RB_o2"></select></div>
-          </div>
-          <div class="row">
-            <label>WR</label>
-            <div class="who">
-              <input class="pname" id="edit_WR_name" placeholder="WR name"/>
-              <select class="pexp" id="edit_WR_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_WR_o1"></select><select id="edit_WR_o2"></select></div>
-          </div>
-          <div class="row">
-            <label>OL</label>
-            <div class="who">
-              <input class="pname" id="edit_OL_name" placeholder="OL unit name"/>
-              <select class="pexp" id="edit_OL_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_OL_o1"></select><select id="edit_OL_o2"></select></div>
-          </div>
+          <div class="row"><label>QB</label><div class="who"><input class="pname" id="edit_QB_name"/><select class="pexp" id="edit_QB_exp"></select></div><div class="pair"><select id="edit_QB_o1"></select><select id="edit_QB_o2"></select></div></div>
+          <div class="row"><label>RB</label><div class="who"><input class="pname" id="edit_RB_name"/><select class="pexp" id="edit_RB_exp"></select></div><div class="pair"><select id="edit_RB_o1"></select><select id="edit_RB_o2"></select></div></div>
+          <div class="row"><label>WR</label><div class="who"><input class="pname" id="edit_WR_name"/><select class="pexp" id="edit_WR_exp"></select></div><div class="pair"><select id="edit_WR_o1"></select><select id="edit_WR_o2"></select></div></div>
+          <div class="row"><label>OL</label><div class="who"><input class="pname" id="edit_OL_name"/><select class="pexp" id="edit_OL_exp"></select></div><div class="pair"><select id="edit_OL_o1"></select><select id="edit_OL_o2"></select></div></div>
 
           <h3>Defense</h3>
-          <div class="row">
-            <label>DL</label>
-            <div class="who">
-              <input class="pname" id="edit_DL_name" placeholder="DL unit name"/>
-              <select class="pexp" id="edit_DL_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_DL_d1"></select><select id="edit_DL_d2"></select></div>
-          </div>
-          <div class="row">
-            <label>LB</label>
-            <div class="who">
-              <input class="pname" id="edit_LB_name" placeholder="LB unit name"/>
-              <select class="pexp" id="edit_LB_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_LB_d1"></select><select id="edit_LB_d2"></select></div>
-          </div>
-          <div class="row">
-            <label>DB</label>
-            <div class="who">
-              <input class="pname" id="edit_DB_name" placeholder="DB unit name"/>
-              <select class="pexp" id="edit_DB_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_DB_d1"></select><select id="edit_DB_d2"></select></div>
-          </div>
+          <div class="row"><label>DL</label><div class="who"><input class="pname" id="edit_DL_name"/><select class="pexp" id="edit_DL_exp"></select></div><div class="pair"><select id="edit_DL_d1"></select><select id="edit_DL_d2"></select></div></div>
+          <div class="row"><label>LB</label><div class="who"><input class="pname" id="edit_LB_name"/><select class="pexp" id="edit_LB_exp"></select></div><div class="pair"><select id="edit_LB_d1"></select><select id="edit_LB_d2"></select></div></div>
+          <div class="row"><label>DB</label><div class="who"><input class="pname" id="edit_DB_name"/><select class="pexp" id="edit_DB_exp"></select></div><div class="pair"><select id="edit_DB_d1"></select><select id="edit_DB_d2"></select></div></div>
 
           <h3>Coach</h3>
-          <div class="row">
-            <label>Head Coach</label>
-            <div class="who">
-              <input class="pname" id="edit_COACH_name" placeholder="Coach name"/>
-              <select class="pexp" id="edit_COACH_exp"></select>
-            </div>
-            <div class="pair"><select id="edit_COACH_t1"></select><select id="edit_COACH_r1"></select></div>
-          </div>
-          <div class="row">
-            <label>Coach Die 2</label>
-            <div class="who">
-              <input class="pname" disabled value="—"/>
-              <select class="pexp" disabled></select>
-            </div>
-            <div class="pair"><select id="edit_COACH_t2"></select><select id="edit_COACH_r2"></select></div>
-          </div>
+          <div class="row"><label>Head Coach</label><div class="who"><input class="pname" id="edit_COACH_name"/><select class="pexp" id="edit_COACH_exp"></select></div><div class="pair"><select id="edit_COACH_t1"></select><select id="edit_COACH_r1"></select></div></div>
+          <div class="row"><label>Coach Die 2</label><div class="who"><input class="pname" disabled value="—"/><select class="pexp" disabled></select></div><div class="pair"><select id="edit_COACH_t2"></select><select id="edit_COACH_r2"></select></div></div>
         </div>
 
         <div class="editor-footer">
@@ -355,7 +220,7 @@
     </div>
   </section>
 
-  <!-- SEASON TAB -->
+  <!-- SEASON -->
   <section id="tab-season" class="tabpanel">
     <div class="season-wrap">
       <section class="season-controls">
@@ -380,16 +245,17 @@
       </section>
     </div>
   </section>
-
 </main>
 
 <footer class="app-footer">
   <small>Gamebreakers College Football — browser edition</small>
 </footer>
 
-<script src="app.js"></script>
+<!-- Modules -->
+<script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
 
 
 
