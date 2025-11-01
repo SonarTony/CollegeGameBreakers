@@ -42,7 +42,7 @@ export function renderGames(SEASON){
 
     const score = document.createElement("div");
     score.className = "game-score";
-    // Display scores as visitor–home to match "visitor @ home"
+    // Display Regular Season scores as visitor–home to match "visitor @ home"
     score.textContent = g.played ? `${g.score.away}–${g.score.home}` : "—";
 
     const actions = document.createElement("div");
@@ -79,7 +79,7 @@ export function teamNameOf(ref){
 
 function bowlRowHTML(b){
   const names = `${teamNameOf(b.away)} @ ${teamNameOf(b.home)}`;
-  // FIX: show bowl scores as visitor–home
+  // Show bowl scores as visitor–home
   const scr = b.played ? `${b.score.away}–${b.score.home}` : "—";
   const klass = "ps-item" + (b.played ? " played":"");
   const chip = b.playoff ? `<span class="chip pl">Playoff</span>` : `<span class="chip nb">Non-Playoff</span>`;
@@ -93,7 +93,8 @@ function bowlRowHTML(b){
 
 function quarterRowHTML(m){
   const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
-  const scr = m.played ? `${m.score.home}–${m.score.away}` : "—";
+  // Show quarterfinal scores as visitor–home
+  const scr = m.played ? `${m.score.away}–${m.score.home}` : "—";
   const klass = "ps-item" + (m.played ? " played":"");
   const btn = (m.home && m.away)
     ? `<button data-quarter="${m.id}">${m.played?"Rewatch":"Play"}</button>`
@@ -107,7 +108,8 @@ function quarterRowHTML(m){
 
 function semiRowHTML(m){
   const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
-  const scr = m.played ? `${m.score.home}–${m.score.away}` : "—";
+  // Show semifinal scores as visitor–home
+  const scr = m.played ? `${m.score.away}–${m.score.home}` : "—";
   const klass = "ps-item" + (m.played ? " played":"");
   const btn = (m.home && m.away)
     ? `<button data-semi="${m.id}">${m.played?"Rewatch":"Play"}</button>`
@@ -121,7 +123,8 @@ function semiRowHTML(m){
 
 function champRowHTML(g){
   const names = `${teamNameOf(g.away)} @ ${teamNameOf(g.home)}`;
-  const scr = g.played ? `${g.score.home}–${g.score.away}` : "—";
+  // Show championship score as visitor–home
+  const scr = g.played ? `${g.score.away}–${g.score.home}` : "—";
   const klass = "ps-item" + (g.played ? " played":"");
   const btn = (g.home && g.away)
     ? `<button data-champ="NCG">${g.played?"Rewatch":"Play"}</button>`
@@ -194,6 +197,7 @@ export function renderPostseason(SEASON){
     });
   });
 }
+
 
 
 
