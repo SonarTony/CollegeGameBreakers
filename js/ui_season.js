@@ -1,3 +1,4 @@
+// js/ui_season.js
 import { saveSeason } from "./season.js";
 import { getTeam } from "./ui_league.js";
 
@@ -65,21 +66,63 @@ export function standingsTableHTML(SEASON, LEAGUE, ci){
   return `${header}${body}</tbody></table>`;
 }
 
-
-
 export function teamNameOf(ref){
   const t = getTeam(ref.ci, ref.ti);
   return t ? t.name : "(?)";
 }
 
-function gameRowHTML(refHome, refAway, played, score, label){
-  const names = `${teamNameOf(refAway)} @ ${teamNameOf(refHome)}`;
-  const scr = played ? `${score.home}–${score.away}` : "—";
-  const klass = "ps-item" + (played ? " played":"");
+function bowlRowHTML(b){
+  const names = `${teamNameOf(b.away)} @ ${teamNameOf(b.home)}`;
+  const scr = b.played ? `${b.score.home}–${b.score.away}` : "—";
+  const klass = "ps-item" + (b.played ? " played":"");
+  const chip = b.playoff ? `<span class="chip pl">Playoff</span>` : `<span class="chip nb">Non-Playoff</span>`;
+  const btn = `<button data-bowl="${b.id}">${b.played?"Rewatch":"Play"}</button>`;
   return `<div class="${klass}">
-    <div>${names}${label?` <span class="badge round">${label}</span>`:""}</div>
+    <div>${b.name} — ${names} ${chip}</div>
     <div class="ps-score">${scr}</div>
-    <div class="ps-actions"></div>
+    <div class="ps-actions">${btn}</div>
+  </div>`;
+}
+
+function quarterRowHTML(m){
+  const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
+  const scr = m.played ? `${m.score.home}–${m.score.away}` : "—";
+  const klass = "ps-item" + (m.played ? " played":"");
+  const btn = (m.home && m.away)
+    ? `<button data-quarter="${m.id}">${m.played?"Rewatch":"Play"}</button>`
+    : `<span class="chip">TBD</span>`;
+  return `<div class="${klass}">
+    <div>${names} <span class="badge round">${m.id}</span></div>
+    <div class="ps-score">${scr}</div>
+    <div class="ps-actions">${btn}</div>
+  </div>`;
+}
+
+function semiRowHTML(m){
+  const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
+  const scr = m.played ? `${m.score.home}–${m.score.away}` : "—";
+  const klass = "ps-item" + (m.played ? " played":"");
+  const btn = (m.home && m.away)
+    ? `<button data-semi="${m.id}">${m.played?"Rewatch":"Play"}</button>`
+    : `<span class="chip">TBD</span>`;
+  return `<div class="${klass}">
+    <div>${names} <span class="badge round">${m.id}</span></div>
+    <div class="ps-score">${scr}</div>
+    <div class="ps-actions">${btn}</div>
+  </div>`;
+}
+
+function champRowHTML(g){
+  const names = `${teamNameOf(g.away)} @ ${teamNameOf(g.home)}`;
+  const scr = g.played ? `${g.score.home}–${g.score.away}` : "—";
+  const klass = "ps-item" + (g.played ? " played":"");
+  const btn = (g.home && g.away)
+    ? `<button data-champ="NCG">${g.played?"Rewatch":"Play"}</button>`
+    : `<span class="chip">TBD</span>`;
+  return `<div class="${klass}">
+    <div>${names} <span class="badge round">${g.name || "NCG"}</span></div>
+    <div class="ps-score">${scr}</div>
+    <div class="ps-actions">${btn}</div>
   </div>`;
 }
 
@@ -92,34 +135,55 @@ export function renderPostseason(SEASON){
     return;
   }
 
-  const initHTML = (ps.bowlsInitial || []).map(b=>{
-    const chip = b.playoff ? `<span class="chip pl">Playoff</span>` : `<span class="chip nb">Non-Playoff</span>`;
-    return `<div class="ps-item${b.played?" played":""}">
-      <div>${b.name} — ${teamNameOf(b.away)} @ ${teamNameOf(b.home)} ${chip}</div>
-      <div class="ps-score">${b.played ? `${b.score.home}–${b.score.away}` : "—"}</div>
-      <div class="ps-actions"><button data-bowl="${b.id}">${b.played?"Rewatch":"Play"}</button></div>
-    </div>`;
-  }).join("");
-
+  // Bowls
+  const initHTML = (ps.bowlsInitial || []).map(bowlRowHTML).join("");
   const st1 = `<div class="ps-stage"><h4>Bowls (Play-in + Non-Playoff)</h4><div class="ps-list">${initHTML}</div></div>`;
-  const qHTML = (ps.quarters||[]).map(m=> gameRowHTML(m.home, m.away, m.played, m.score, m.id)).join("") || `<em>Not set</em>`;
+
+  // Quarters
+  const qHTML = (ps.quarters||[]).map(quarterRowHTML).join("") || `<em>Not set</em>`;
   const st2 = `<div class="ps-stage"><h4>Quarterfinals</h4><div class="ps-list">${qHTML}</div></div>`;
-  const sHTML = (ps.semis||[]).map(m=> gameRowHTML(m.home, m.away, m.played, m.score, m.id)).join("") || `<em>Not set</em>`;
+
+  // Semis
+  const sHTML = (ps.semis||[]).map(semiRowHTML).join("") || `<em>Not set</em>`;
   const st3 = `<div class="ps-stage"><h4>Semifinals</h4><div class="ps-list">${sHTML}</div></div>`;
 
+  // Championship
   let cHTML = `<em>Not set</em>`;
   if(ps.championship){
-    const g = ps.championship;
-    cHTML = gameRowHTML(g.home, g.away, g.played, g.score, g.name || "NCG");
+    cHTML = champRowHTML(ps.championship);
   }
   const st4 = `<div class="ps-stage"><h4>National Championship</h4><div class="ps-list">${cHTML}</div></div>`;
 
   holder.innerHTML = st1 + st2 + st3 + st4;
 
+  // Wire: Bowls (existing behavior)
   holder.querySelectorAll("[data-bowl]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const id = parseInt(btn.getAttribute("data-bowl"),10);
       window.playBowlById(id);
+    });
+  });
+
+  // Wire: Quarterfinals per-game
+  holder.querySelectorAll("[data-quarter]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-quarter"); // "Q1".."Q4"
+      window.playQuarterById(id);
+    });
+  });
+
+  // Wire: Semifinals per-game
+  holder.querySelectorAll("[data-semi]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-semi"); // "S1"|"S2"
+      window.playSemiById(id);
+    });
+  });
+
+  // Wire: Championship single game
+  holder.querySelectorAll("[data-champ]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      window.playChampionshipSingle();
     });
   });
 }

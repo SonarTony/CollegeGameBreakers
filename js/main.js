@@ -312,6 +312,8 @@ function wirePostseasonButtons(){
       b.details = sim.details;
       b.winner = (sim.score.home>sim.score.away ? b.home : b.away);
       saveSeason(SEASON);
+      // If that completed the play-in set, seed Quarters
+      buildQuarterfinals(SEASON); // harmless if not ready
       renderPostseason(SEASON);
     }
 
@@ -331,6 +333,119 @@ function wirePostseasonButtons(){
 
     document.getElementById("homeScore").textContent = b.score.home;
     document.getElementById("awayScore").textContent = b.score.away;
+    document.getElementById("homeSummary").textContent = hRender.summary;
+    document.getElementById("awaySummary").textContent = aRender.summary;
+    document.getElementById("homeDetail").innerHTML = hRender.body;
+    document.getElementById("awayDetail").innerHTML = aRender.body;
+  };
+
+  // NEW: Allow clicking an individual Quarterfinal (Play/Rewatch)
+  window.playQuarterById = (qid /* "Q1".."Q4" */)=>{
+    const ps = SEASON.postseason; if(!ps || !ps.quarters) return;
+    const m = ps.quarters.find(x=>x.id===qid); if(!m) return;
+
+    // If not played, simulate + persist; else rewatch
+    if(!m.played){
+      const home = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
+      const away = JSON.parse(JSON.stringify(getTeam(m.away.ci, m.away.ti)));
+      const sim = simulateMatchByTeams(home, away);
+      m.played = true;
+      m.score = sim.score;
+      m.details = sim.details;
+      m.winner = (sim.score.home>sim.score.away ? m.home : m.away);
+      saveSeason(SEASON);
+      // If all QFs now have winners, build Semifinals
+      buildSemifinals(SEASON); // harmless if not ready
+      renderPostseason(SEASON);
+    }
+
+    // Rewatch
+    document.querySelector('[data-tab="play"]').click();
+    refreshTeamPickers();
+    const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
+    const awayTeam = JSON.parse(JSON.stringify(getTeam(m.away.ci, m.away.ti)));
+    applyTeamToSide(homeTeam, "home");
+    applyTeamToSide(awayTeam, "away");
+
+    const { h, a, hf, af } = m.details;
+    const hRender = buildBreakdownHTML(h, a, hf);
+    const aRender = buildBreakdownHTML(a, h, af);
+    document.getElementById("homeScore").textContent = m.score.home;
+    document.getElementById("awayScore").textContent = m.score.away;
+    document.getElementById("homeSummary").textContent = hRender.summary;
+    document.getElementById("awaySummary").textContent = aRender.summary;
+    document.getElementById("homeDetail").innerHTML = hRender.body;
+    document.getElementById("awayDetail").innerHTML = aRender.body;
+  };
+
+  // NEW: Allow clicking an individual Semifinal (Play/Rewatch)
+  window.playSemiById = (sid /* "S1"|"S2" */)=>{
+    const ps = SEASON.postseason; if(!ps || !ps.semis) return;
+    const m = ps.semis.find(x=>x.id===sid); if(!m) return;
+
+    if(!m.played){
+      const home = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
+      const away = JSON.parse(JSON.stringify(getTeam(m.away.ci, m.away.ti)));
+      const sim = simulateMatchByTeams(home, away);
+      m.played = true;
+      m.score = sim.score;
+      m.details = sim.details;
+      m.winner = (sim.score.home>sim.score.away ? m.home : m.away);
+      saveSeason(SEASON);
+      // If both semis have winners, build Championship
+      buildChampionship(SEASON); // harmless if not ready
+      renderPostseason(SEASON);
+    }
+
+    // Rewatch
+    document.querySelector('[data-tab="play"]').click();
+    refreshTeamPickers();
+    const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
+    const awayTeam = JSON.parse(JSON.stringify(getTeam(m.away.ci, m.away.ti)));
+    applyTeamToSide(homeTeam, "home");
+    applyTeamToSide(awayTeam, "away");
+
+    const { h, a, hf, af } = m.details;
+    const hRender = buildBreakdownHTML(h, a, hf);
+    const aRender = buildBreakdownHTML(a, h, af);
+    document.getElementById("homeScore").textContent = m.score.home;
+    document.getElementById("awayScore").textContent = m.score.away;
+    document.getElementById("homeSummary").textContent = hRender.summary;
+    document.getElementById("awaySummary").textContent = aRender.summary;
+    document.getElementById("homeDetail").innerHTML = hRender.body;
+    document.getElementById("awayDetail").innerHTML = aRender.body;
+  };
+
+  // NEW: Allow clicking the Championship game (Play/Rewatch)
+  window.playChampionshipSingle = ()=>{
+    const ps = SEASON.postseason; if(!ps || !ps.championship) return;
+    const g = ps.championship;
+
+    if(!g.played){
+      const home = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
+      const away = JSON.parse(JSON.stringify(getTeam(g.away.ci, g.away.ti)));
+      const sim = simulateMatchByTeams(home, away);
+      g.played = true;
+      g.score = sim.score;
+      g.details = sim.details;
+      g.winner = (sim.score.home>sim.score.away ? g.home : g.away);
+      saveSeason(SEASON);
+      renderPostseason(SEASON);
+    }
+
+    // Rewatch
+    document.querySelector('[data-tab="play"]').click();
+    refreshTeamPickers();
+    const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
+    const awayTeam = JSON.parse(JSON.stringify(getTeam(g.away.ci, g.away.ti)));
+    applyTeamToSide(homeTeam, "home");
+    applyTeamToSide(awayTeam, "away");
+
+    const { h, a, hf, af } = g.details;
+    const hRender = buildBreakdownHTML(h, a, hf);
+    const aRender = buildBreakdownHTML(a, h, af);
+    document.getElementById("homeScore").textContent = g.score.home;
+    document.getElementById("awayScore").textContent = g.score.away;
     document.getElementById("homeSummary").textContent = hRender.summary;
     document.getElementById("awaySummary").textContent = aRender.summary;
     document.getElementById("homeDetail").innerHTML = hRender.body;
