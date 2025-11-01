@@ -188,6 +188,28 @@ button.primary:hover{ filter:brightness(1.05); }
 .chip.pl{background:#112a18;border-color:#1d4d31;color:#bff3d4}
 .chip.nb{background:#2a2311;border-color:#5a4b1e;color:#ffeab2}
 
+/* ======== ADDITIVE ONLY: new UI bits (no overrides) ======== */
+
+/* Quarter/Semi/Champ headers with local Play buttons */
+.ps-stage-head{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin:0 0 .35rem 0; }
+.ps-stage-head .right{ display:flex; gap:.4rem; }
+
+/* Ensure per-item action area looks okay when we render individual “Play/Rewatch” buttons */
+.ps-actions{ display:flex; justify-content:flex-end; }
+.ps-actions button{ min-width:120px; }
+
+/* History tab */
+.history-wrap{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:.8rem; }
+.history-controls{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; margin-bottom:.6rem; }
+.history-grid{ display:grid; grid-template-columns:1fr; gap:.6rem; }
+.history-section{ background:#0f1122; border:1px solid var(--line); border-radius:10px; padding:.6rem; }
+.history-title{ margin:0 0 .4rem 0; color:var(--accent); }
+.history-table{ width:100%; border-collapse:collapse; border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.history-table th, .history-table td{ border-bottom:1px solid var(--line); padding:.35rem .5rem; text-align:left; font-size:.95rem; }
+.history-table th{ background:#0f1328; color:#cfe2ff; }
+.history-table tr:last-child td{ border-bottom:none; }
+
+
 
 
 

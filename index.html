@@ -13,6 +13,7 @@
     <button class="tab active" data-tab="play">Play</button>
     <button class="tab" data-tab="league">League Manager</button>
     <button class="tab" data-tab="season">Season</button>
+    <button class="tab" data-tab="history">History</button>
   </nav>
 </header>
 
@@ -230,11 +231,12 @@
           <button class="primary" id="btnSimWeek">Simulate Week</button>
           <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
           <button class="ghost" id="btnResetSeason">Reset Season</button>
+          <button class="ghost" id="btnSaveSeasonHistory">Save Season to History</button>
         </div>
       </section>
 
       <section class="season-body">
-        <!-- Games + Standings first (side-by-side per your CSS) -->
+        <!-- Games + Standings first -->
         <div class="games-panel">
           <h3>Games</h3>
           <div id="gamesList" class="games-list"></div>
@@ -248,18 +250,28 @@
         <div class="postseason-panel">
           <h3>Postseason Bowls & Playoffs</h3>
 
+          <!-- Keep only Generate & Reset here -->
           <div class="ps-controls">
             <button class="primary" id="btnGenPostseason">Generate Bowls</button>
-            <button class="ghost" id="btnPlayAllBowls">Play All Bowls</button>
-            <button class="ghost" id="btnPlayQuarterfinals">Play Quarterfinals</button>
-            <button class="ghost" id="btnPlaySemifinals">Play Semifinals</button>
-            <button class="ghost" id="btnPlayChampionship">Play Championship</button>
             <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
           </div>
 
           <div id="postseasonView"></div>
         </div>
       </section>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="tab-history" class="tabpanel">
+    <div class="history-wrap">
+      <div class="history-controls">
+        <label for="historySelect">View:</label>
+        <select id="historySelect"></select>
+        <button class="ghost" id="btnClearHistory">Delete All History</button>
+      </div>
+
+      <div id="historyView"></div>
     </div>
   </section>
 </main>
@@ -272,6 +284,7 @@
 <script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
 
 
 

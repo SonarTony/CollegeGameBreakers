@@ -32,7 +32,7 @@ export function renderGames(SEASON){
   const wrap = document.getElementById("gamesList");
   wrap.innerHTML = "";
   const w = SEASON.weeks.find(x=>x.week===SEASON.currentWeek);
-  w.games.forEach((g, idx)=>{
+  w.games.forEach((g)=>{
     const row = document.createElement("div");
     row.className = "game-row" + (g.played ? " played":"");
 
@@ -42,7 +42,7 @@ export function renderGames(SEASON){
 
     const score = document.createElement("div");
     score.className = "game-score";
-    // Display Regular Season scores as visitor–home to match "visitor @ home"
+    // Show scores visitor–home to match "visitor @ home"
     score.textContent = g.played ? `${g.score.away}–${g.score.home}` : "—";
 
     const actions = document.createElement("div");
@@ -79,7 +79,7 @@ export function teamNameOf(ref){
 
 function bowlRowHTML(b){
   const names = `${teamNameOf(b.away)} @ ${teamNameOf(b.home)}`;
-  // Show bowl scores as visitor–home
+  // Visitor–home score order
   const scr = b.played ? `${b.score.away}–${b.score.home}` : "—";
   const klass = "ps-item" + (b.played ? " played":"");
   const chip = b.playoff ? `<span class="chip pl">Playoff</span>` : `<span class="chip nb">Non-Playoff</span>`;
@@ -93,7 +93,6 @@ function bowlRowHTML(b){
 
 function quarterRowHTML(m){
   const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
-  // Show quarterfinal scores as visitor–home
   const scr = m.played ? `${m.score.away}–${m.score.home}` : "—";
   const klass = "ps-item" + (m.played ? " played":"");
   const btn = (m.home && m.away)
@@ -108,7 +107,6 @@ function quarterRowHTML(m){
 
 function semiRowHTML(m){
   const names = `${teamNameOf(m.away)} @ ${teamNameOf(m.home)}`;
-  // Show semifinal scores as visitor–home
   const scr = m.played ? `${m.score.away}–${m.score.home}` : "—";
   const klass = "ps-item" + (m.played ? " played":"");
   const btn = (m.home && m.away)
@@ -123,7 +121,6 @@ function semiRowHTML(m){
 
 function champRowHTML(g){
   const names = `${teamNameOf(g.away)} @ ${teamNameOf(g.home)}`;
-  // Show championship score as visitor–home
   const scr = g.played ? `${g.score.away}–${g.score.home}` : "—";
   const klass = "ps-item" + (g.played ? " played":"");
   const btn = (g.home && g.away)
@@ -145,28 +142,64 @@ export function renderPostseason(SEASON){
     return;
   }
 
-  // Bowls
+  // Bowls (with its own section-level button)
   const initHTML = (ps.bowlsInitial || []).map(bowlRowHTML).join("");
-  const st1 = `<div class="ps-stage"><h4>Bowls (Play-in + Non-Playoff)</h4><div class="ps-list">${initHTML}</div></div>`;
+  const st1 = `
+    <div class="ps-stage">
+      <div class="ps-stage-head">
+        <h4>Bowls (Play-in + Non-Playoff)</h4>
+        <div class="ps-section-controls">
+          <button class="ghost" id="btnPlayAllBowls">Play All Bowls</button>
+        </div>
+      </div>
+      <div class="ps-list">${initHTML}</div>
+    </div>`;
 
   // Quarters
   const qHTML = (ps.quarters||[]).map(quarterRowHTML).join("") || `<em>Not set</em>`;
-  const st2 = `<div class="ps-stage"><h4>Quarterfinals</h4><div class="ps-list">${qHTML}</div></div>`;
+  const st2 = `
+    <div class="ps-stage">
+      <div class="ps-stage-head">
+        <h4>Quarterfinals</h4>
+        <div class="ps-section-controls">
+          <button class="ghost" id="btnPlayQuarterfinals">Play Quarterfinals</button>
+        </div>
+      </div>
+      <div class="ps-list">${qHTML}</div>
+    </div>`;
 
   // Semis
   const sHTML = (ps.semis||[]).map(semiRowHTML).join("") || `<em>Not set</em>`;
-  const st3 = `<div class="ps-stage"><h4>Semifinals</h4><div class="ps-list">${sHTML}</div></div>`;
+  const st3 = `
+    <div class="ps-stage">
+      <div class="ps-stage-head">
+        <h4>Semifinals</h4>
+        <div class="ps-section-controls">
+          <button class="ghost" id="btnPlaySemifinals">Play Semifinals</button>
+        </div>
+      </div>
+      <div class="ps-list">${sHTML}</div>
+    </div>`;
 
   // Championship
   let cHTML = `<em>Not set</em>`;
   if(ps.championship){
     cHTML = champRowHTML(ps.championship);
   }
-  const st4 = `<div class="ps-stage"><h4>National Championship</h4><div class="ps-list">${cHTML}</div></div>`;
+  const st4 = `
+    <div class="ps-stage">
+      <div class="ps-stage-head">
+        <h4>National Championship</h4>
+        <div class="ps-section-controls">
+          <button class="ghost" id="btnPlayChampionship">Play Championship</button>
+        </div>
+      </div>
+      <div class="ps-list">${cHTML}</div>
+    </div>`;
 
   holder.innerHTML = st1 + st2 + st3 + st4;
 
-  // Wire: Bowls (existing behavior)
+  // Wire: Bowls (existing per-game Play/Rewatch)
   holder.querySelectorAll("[data-bowl]").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const id = parseInt(btn.getAttribute("data-bowl"),10);

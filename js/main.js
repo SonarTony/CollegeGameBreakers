@@ -1,7 +1,7 @@
 // js/main.js
-// Entry point for tabs, Play/League/Season wiring, and Postseason controls.
+// Entry point for tabs, Play/League/Season wiring, Postseason controls, and History.
 
-import { OFF_SLOTS, DEF_SLOTS } from "./constants.js";
+import { OFF_SLOTS, DEF_SLOTS, LS_HISTORY } from "./constants.js";
 import { loadLeague } from "./league.js";
 import {
   loadSeason,
@@ -54,9 +54,149 @@ import {
 let LEAGUE = LEAGUE_STATE;
 let SEASON = null;
 
-/* -------------------------
+/* =========================
+   HISTORY: helpers
+========================= */
+function loadHistory(){
+  const raw = localStorage.getItem(LS_HISTORY);
+  if(!raw) return { seasons: [] };
+  try { return JSON.parse(raw) || { seasons: [] }; }
+  catch(e){ return { seasons: [] }; }
+}
+
+function saveHistory(hist){
+  localStorage.setItem(LS_HISTORY, JSON.stringify(hist));
+}
+
+function clearHistory(){
+  localStorage.removeItem(LS_HISTORY);
+}
+
+/**
+ * Build a snapshot of the finished (or current) season so it can be shown later.
+ * Stores:
+ *  - label: "Season N" (auto) or carries SEASON.year if present
+ *  - standings: per-team W/L/PF/PA
+ *  - postseason summary: bowl appearances, champion
+ *  - per-team season counts: bowls, championships for that season
+ */
+function buildSeasonSnapshot(SEASON){
+  // Label
+  const hist = loadHistory();
+  const seasonNumber = (hist.seasons?.length || 0) + 1;
+  const label = SEASON?.year ? `Season ${SEASON.year}` : `Season ${seasonNumber}`;
+
+  // Standings copy
+  const standings = {};
+  Object.keys(SEASON.standings).forEach(key=>{
+    const rec = SEASON.standings[key];
+    standings[key] = { w:rec.w, l:rec.l, pf:rec.pf, pa:rec.pa };
+  });
+
+  // Postseason summary
+  const ps = SEASON.postseason || null;
+
+  // Per-team counters for THIS season
+  const seasonTeamMeta = {}; // key "ci:ti" → { bowls:0, champ:0, name }
+  const addTeam = (ref)=>{
+    if(!ref) return;
+    const k = `${ref.ci}:${ref.ti}`;
+    if(!seasonTeamMeta[k]) seasonTeamMeta[k] = { bowls:0, champ:0, name:getTeam(ref.ci,ref.ti).name };
+    return seasonTeamMeta[k];
+  };
+
+  if(ps){
+    // any bowl appearance counts
+    (ps.bowlsInitial||[]).forEach(b=>{
+      addTeam(b.home).bowls++;
+      addTeam(b.away).bowls++;
+    });
+    // quarters/semis/championship appearances (count as bowls, too)
+    (ps.quarters||[]).forEach(m=>{ addTeam(m.home).bowls++; addTeam(m.away).bowls++; });
+    (ps.semis||[]).forEach(m=>{ addTeam(m.home).bowls++; addTeam(m.away).bowls++; });
+    if(ps.championship){
+      addTeam(ps.championship.home).bowls++;
+      addTeam(ps.championship.away).bowls++;
+      if(ps.championship.winner){
+        addTeam(ps.championship.winner).champ++;
+      }
+    }
+  }
+
+  // Expand team names alongside standings for easier viewing later
+  const teams = {};
+  Object.keys(standings).forEach(k=>{
+    const [ci,ti] = k.split(":").map(n=>parseInt(n,10));
+    teams[k] = { name: getTeam(ci,ti).name, ci, ti };
+  });
+
+  return {
+    label,
+    createdAt: Date.now(),
+    standings,
+    teams,
+    postseason: ps ? {
+      bowlsInitial: (ps.bowlsInitial||[]).map(b=>({
+        id:b.id, name:b.name, playoff:!!b.playoff, round:b.round,
+        home:b.home, away:b.away, played:b.played,
+        score:b.score, winner:b.winner
+      })),
+      quarters: (ps.quarters||[]).map(m=>({
+        id:m.id, home:m.home, away:m.away, played:m.played, score:m.score, winner:m.winner
+      })),
+      semis: (ps.semis||[]).map(m=>({
+        id:m.id, home:m.home, away:m.away, played:m.played, score:m.score, winner:m.winner
+      })),
+      championship: ps.championship ? {
+        id: ps.championship.id,
+        name: ps.championship.name,
+        home: ps.championship.home,
+        away: ps.championship.away,
+        played: ps.championship.played,
+        score: ps.championship.score,
+        winner: ps.championship.winner
+      } : null
+    } : null,
+    seasonTeamMeta // bowls/champ for this season
+  };
+}
+
+/**
+ * Compute Totals table across all saved seasons:
+ *  per team: name, total W, L, Bowls, Championships
+ */
+function computeTotals(history){
+  const totals = {}; // key ci:ti
+  const addTeam = (k, name)=>{
+    if(!totals[k]) totals[k] = { name, w:0, l:0, bowls:0, champ:0 };
+    return totals[k];
+  };
+  (history.seasons||[]).forEach(s=>{
+    // Wins/Losses sum from s.standings
+    Object.keys(s.standings).forEach(k=>{
+      const rec = s.standings[k];
+      const nm = s.teams[k]?.name || "(Unknown)";
+      const row = addTeam(k, nm);
+      row.w += rec.w || 0;
+      row.l += rec.l || 0;
+    });
+    // Bowls/Championships from seasonTeamMeta
+    Object.keys(s.seasonTeamMeta||{}).forEach(k=>{
+      const st = s.seasonTeamMeta[k];
+      const row = addTeam(k, st.name);
+      row.bowls += st.bowls || 0;
+      row.champ += st.champ || 0;
+    });
+  });
+  // Convert to array and sort by Champ, Bowls, W
+  const arr = Object.keys(totals).map(k=>({ key:k, ...totals[k] }));
+  arr.sort((a,b)=> (b.champ - a.champ) || (b.bowls - a.bowls) || (b.w - a.w) || a.name.localeCompare(b.name));
+  return arr;
+}
+
+/* =========================
    Tabs
---------------------------*/
+========================= */
 function initTabs(){
   const tabs = document.querySelectorAll(".tab");
   tabs.forEach(btn=>{
@@ -80,13 +220,16 @@ function initTabs(){
         renderStandingsAll();
         renderPostseason(SEASON);
       }
+      if(name==="history"){
+        renderHistoryTab();
+      }
     });
   });
 }
 
-/* -------------------------
+/* =========================
    Season helpers
---------------------------*/
+========================= */
 function ensureSeason(){
   if (SEASON) return;
   const raw = loadSeason();
@@ -112,17 +255,12 @@ function renderStandingsAll(){
   });
 }
 
-/* -------------------------
+/* =========================
    Play tab rendering (results & rewatch)
---------------------------*/
+========================= */
 function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
-  // Jump to Play tab
   document.querySelector('[data-tab="play"]').click();
-
-  // Ensure pickers exist/are populated
   refreshTeamPickers();
-
-  // Show the two teams and the saved breakdown
   applyTeamToSide(homeTeam, "home");
   applyTeamToSide(awayTeam, "away");
 
@@ -140,8 +278,6 @@ function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
 
 /**
  * Play or Rewatch a scheduled season game.
- * - replay=false: simulate if not played, save standings, store full details.
- * - replay=true : do not simulate; render saved score/details into Play tab.
  */
 function playScheduledGame(g, {replay=false}={}){
   const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
@@ -152,11 +288,9 @@ function playScheduledGame(g, {replay=false}={}){
     return;
   }
 
-  // Fresh simulation
   const sim = simulateMatchByTeams(homeTeam, awayTeam);
   const { score, details } = sim;
 
-  // First-time play: persist into season + standings
   if (!g.played){
     g.played = true;
     g.score = score;
@@ -176,19 +310,16 @@ function playScheduledGame(g, {replay=false}={}){
     saveSeason(SEASON);
   }
 
-  // Show result in Play tab
   renderGameResultsToPlayTab(homeTeam, awayTeam, details, score);
-
-  // Return to Season view and refresh UI
   document.querySelector('[data-tab="season"]').click();
   renderGames(SEASON);
   renderStandingsAll();
 }
 window.playScheduledGame = playScheduledGame;
 
-/* -------------------------
+/* =========================
    Season tab buttons
---------------------------*/
+========================= */
 function wireSeasonButtons(){
   const weekSel = document.getElementById("seasonWeek");
 
@@ -212,11 +343,22 @@ function wireSeasonButtons(){
     renderStandingsAll();
     renderPostseason(SEASON);
   });
+
+  const btnSaveHist = document.getElementById("btnSaveSeasonHistory");
+  if(btnSaveHist){
+    btnSaveHist.addEventListener("click", ()=>{
+      const snapshot = buildSeasonSnapshot(SEASON);
+      const hist = loadHistory();
+      hist.seasons.push(snapshot);
+      saveHistory(hist);
+      alert(`Saved ${snapshot.label} to History.`);
+    });
+  }
 }
 
-/* -------------------------
-   Play tab: load/save pickers for teams
---------------------------*/
+/* =========================
+   Play tab: load/save pickers
+========================= */
 function wirePlayPickers(){
   document.getElementById("btnLoadHome").addEventListener("click", ()=>{
     const id = document.getElementById("pickHomeTeam").value;
@@ -251,58 +393,73 @@ function wirePlayPickers(){
   });
 }
 
-/* -------------------------
+/* =========================
    Postseason wiring
---------------------------*/
+========================= */
 function wirePostseasonButtons(){
   const g = id => document.getElementById(id);
 
-  g("btnGenPostseason").addEventListener("click", ()=>{
-    SEASON.postseason = null;
-    generatePostseason(LEAGUE, SEASON);
-    renderPostseason(SEASON);
-  });
-
-  g("btnPlayAllBowls").addEventListener("click", ()=>{
-    if(!SEASON.postseason) return;
-    playUnplayedBowls(SEASON, LEAGUE);
-    renderPostseason(SEASON);
-  });
-
-  g("btnPlayQuarterfinals").addEventListener("click", ()=>{
-    if(!SEASON.postseason) return;
-    if((SEASON.postseason.quarters||[]).length===0) buildQuarterfinals(SEASON);
-    playQuarterfinals(SEASON, LEAGUE);
-    renderPostseason(SEASON);
-  });
-
-  g("btnPlaySemifinals").addEventListener("click", ()=>{
-    if(!SEASON.postseason) return;
-    if((SEASON.postseason.semis||[]).length===0) buildSemifinals(SEASON);
-    playSemifinals(SEASON, LEAGUE);
-    renderPostseason(SEASON);
-  });
-
-  g("btnPlayChampionship").addEventListener("click", ()=>{
-    if(!SEASON.postseason) return;
-    if(!SEASON.postseason.championship) buildChampionship(SEASON);
-    playChampionship(SEASON, LEAGUE);
-    renderPostseason(SEASON);
-  });
-
-  g("btnResetPostseason").addEventListener("click", ()=>{
-    if(confirm("Reset postseason?")){
-      resetPostseason(SEASON);
+  const btnGen = g("btnGenPostseason");
+  if (btnGen){
+    btnGen.addEventListener("click", ()=>{
+      SEASON.postseason = null;
+      generatePostseason(LEAGUE, SEASON);
       renderPostseason(SEASON);
-    }
-  });
+    });
+  }
 
-  // Allow clicking individual initial bowls (Play/Rewatch)
+  const btnResetPS = g("btnResetPostseason");
+  if (btnResetPS){
+    btnResetPS.addEventListener("click", ()=>{
+      if(confirm("Reset postseason?")){
+        resetPostseason(SEASON);
+        renderPostseason(SEASON);
+      }
+    });
+  }
+
+  // Section control buttons are rendered inside #postseasonView; delegate clicks there.
+  const pv = document.getElementById("postseasonView");
+  if (pv){
+    pv.addEventListener("click", (e)=>{
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+
+      if (t.id === "btnPlayAllBowls"){
+        if(!SEASON.postseason) return;
+        playUnplayedBowls(SEASON, LEAGUE);
+        renderPostseason(SEASON);
+        return;
+      }
+      if (t.id === "btnPlayQuarterfinals"){
+        if(!SEASON.postseason) return;
+        if((SEASON.postseason.quarters||[]).length===0) buildQuarterfinals(SEASON);
+        playQuarterfinals(SEASON, LEAGUE);
+        renderPostseason(SEASON);
+        return;
+      }
+      if (t.id === "btnPlaySemifinals"){
+        if(!SEASON.postseason) return;
+        if((SEASON.postseason.semis||[]).length===0) buildSemifinals(SEASON);
+        playSemifinals(SEASON, LEAGUE);
+        renderPostseason(SEASON);
+        return;
+      }
+      if (t.id === "btnPlayChampionship"){
+        if(!SEASON.postseason) return;
+        if(!SEASON.postseason.championship) buildChampionship(SEASON);
+        playChampionship(SEASON, LEAGUE);
+        renderPostseason(SEASON);
+        return;
+      }
+    });
+  }
+
+  // Per-game handlers exposed globally (Bowls, Quarters, Semis, Champ)
   window.playBowlById = (id)=>{
     const ps = SEASON.postseason; if(!ps) return;
     const b = ps.bowlsInitial.find(x=>x.id===id); if(!b) return;
 
-    // If not yet played, simulate + persist
     if(!b.played){
       const home = JSON.parse(JSON.stringify(getTeam(b.home.ci, b.home.ti)));
       const away = JSON.parse(JSON.stringify(getTeam(b.away.ci, b.away.ti)));
@@ -312,25 +469,20 @@ function wirePostseasonButtons(){
       b.details = sim.details;
       b.winner = (sim.score.home>sim.score.away ? b.home : b.away);
       saveSeason(SEASON);
-      // If that completed the play-in set, seed Quarters
-      buildQuarterfinals(SEASON); // harmless if not ready
+      buildQuarterfinals(SEASON);
       renderPostseason(SEASON);
     }
 
-    // Rewatch: render stored details to Play tab
     document.querySelector('[data-tab="play"]').click();
     refreshTeamPickers();
-
     const homeTeam = JSON.parse(JSON.stringify(getTeam(b.home.ci, b.home.ti)));
     const awayTeam = JSON.parse(JSON.stringify(getTeam(b.away.ci, b.away.ti)));
-
     applyTeamToSide(homeTeam, "home");
     applyTeamToSide(awayTeam, "away");
 
     const { h, a, hf, af } = b.details;
     const hRender = buildBreakdownHTML(h, a, hf);
     const aRender = buildBreakdownHTML(a, h, af);
-
     document.getElementById("homeScore").textContent = b.score.home;
     document.getElementById("awayScore").textContent = b.score.away;
     document.getElementById("homeSummary").textContent = hRender.summary;
@@ -339,12 +491,10 @@ function wirePostseasonButtons(){
     document.getElementById("awayDetail").innerHTML = aRender.body;
   };
 
-  // NEW: Allow clicking an individual Quarterfinal (Play/Rewatch)
-  window.playQuarterById = (qid /* "Q1".."Q4" */)=>{
+  window.playQuarterById = (qid)=>{
     const ps = SEASON.postseason; if(!ps || !ps.quarters) return;
     const m = ps.quarters.find(x=>x.id===qid); if(!m) return;
 
-    // If not played, simulate + persist; else rewatch
     if(!m.played){
       const home = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
       const away = JSON.parse(JSON.stringify(getTeam(m.away.ci, m.away.ti)));
@@ -354,12 +504,10 @@ function wirePostseasonButtons(){
       m.details = sim.details;
       m.winner = (sim.score.home>sim.score.away ? m.home : m.away);
       saveSeason(SEASON);
-      // If all QFs now have winners, build Semifinals
-      buildSemifinals(SEASON); // harmless if not ready
+      buildSemifinals(SEASON);
       renderPostseason(SEASON);
     }
 
-    // Rewatch
     document.querySelector('[data-tab="play"]').click();
     refreshTeamPickers();
     const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
@@ -378,8 +526,7 @@ function wirePostseasonButtons(){
     document.getElementById("awayDetail").innerHTML = aRender.body;
   };
 
-  // NEW: Allow clicking an individual Semifinal (Play/Rewatch)
-  window.playSemiById = (sid /* "S1"|"S2" */)=>{
+  window.playSemiById = (sid)=>{
     const ps = SEASON.postseason; if(!ps || !ps.semis) return;
     const m = ps.semis.find(x=>x.id===sid); if(!m) return;
 
@@ -392,12 +539,10 @@ function wirePostseasonButtons(){
       m.details = sim.details;
       m.winner = (sim.score.home>sim.score.away ? m.home : m.away);
       saveSeason(SEASON);
-      // If both semis have winners, build Championship
-      buildChampionship(SEASON); // harmless if not ready
+      buildChampionship(SEASON);
       renderPostseason(SEASON);
     }
 
-    // Rewatch
     document.querySelector('[data-tab="play"]').click();
     refreshTeamPickers();
     const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
@@ -416,7 +561,6 @@ function wirePostseasonButtons(){
     document.getElementById("awayDetail").innerHTML = aRender.body;
   };
 
-  // NEW: Allow clicking the Championship game (Play/Rewatch)
   window.playChampionshipSingle = ()=>{
     const ps = SEASON.postseason; if(!ps || !ps.championship) return;
     const g = ps.championship;
@@ -433,7 +577,6 @@ function wirePostseasonButtons(){
       renderPostseason(SEASON);
     }
 
-    // Rewatch
     document.querySelector('[data-tab="play"]').click();
     refreshTeamPickers();
     const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
@@ -453,9 +596,135 @@ function wirePostseasonButtons(){
   };
 }
 
-/* -------------------------
+/* =========================
+   HISTORY: rendering & wiring
+========================= */
+function renderHistoryTab(){
+  const hist = loadHistory();
+  const select = document.getElementById("historySelect");
+  const view = document.getElementById("historyView");
+
+  // Build dropdown: "Totals" + each season label (newest first)
+  select.innerHTML = "";
+  const optTotals = document.createElement("option");
+  optTotals.value = "TOTALS";
+  optTotals.textContent = "Totals (All Seasons)";
+  select.appendChild(optTotals);
+
+  const seasons = [...(hist.seasons||[])];
+  seasons.forEach((s, idx)=>{
+    // keep order oldest->newest in dropdown if desired; we can append in order added
+    const opt = document.createElement("option");
+    opt.value = `S:${idx}`; // index in hist.seasons
+    opt.textContent = s.label || `Season ${idx+1}`;
+    select.appendChild(opt);
+  });
+
+  select.onchange = ()=> renderHistoryView(select.value, hist, view);
+  // default: Totals
+  select.value = "TOTALS";
+  renderHistoryView("TOTALS", hist, view);
+
+  // wire delete all
+  const btnDel = document.getElementById("btnClearHistory");
+  if(btnDel){
+    btnDel.onclick = ()=>{
+      if(!confirm("Delete ALL saved history? This cannot be undone.")) return;
+      clearHistory();
+      renderHistoryTab(); // refresh
+    };
+  }
+}
+
+function renderHistoryView(which, hist, view){
+  view.innerHTML = "";
+  if(which === "TOTALS"){
+    const totals = computeTotals(hist);
+    if(totals.length === 0){
+      view.innerHTML = `<em>No history saved yet. Use "Save Season to History" on the Season tab.</em>`;
+      return;
+    }
+    const rows = totals.map(r=>`
+      <tr>
+        <td>${r.name}</td>
+        <td>${r.w}</td>
+        <td>${r.l}</td>
+        <td>${r.bowls}</td>
+        <td>${r.champ}</td>
+      </tr>
+    `).join("");
+    view.innerHTML = `
+      <div class="history-section">
+        <h4 class="history-title">All-Time Totals</h4>
+        <table class="history-table">
+          <thead><tr><th>Team</th><th>W</th><th>L</th><th>Bowls</th><th>Championships</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+    return;
+  }
+
+  // Specific season recap
+  const idx = parseInt(which.split(":")[1],10);
+  const s = (hist.seasons||[])[idx];
+  if(!s){
+    view.innerHTML = `<em>Season not found.</em>`;
+    return;
+  }
+
+  // Standings table
+  const sRows = Object.keys(s.standings).map(k=>{
+    const rec = s.standings[k];
+    const nm = s.teams[k]?.name || k;
+    const diff = (rec.pf - rec.pa);
+    return `<tr><td>${nm}</td><td>${rec.w}</td><td>${rec.l}</td><td>${rec.pf}</td><td>${rec.pa}</td><td>${diff>=0?'+':''}${diff}</td></tr>`;
+  }).join("");
+
+  // Champion (if any)
+  let champLine = `<em>No champion recorded.</em>`;
+  if(s.postseason?.championship?.winner){
+    const wref = s.postseason.championship.winner;
+    champLine = `<strong>Champion:</strong> ${getTeam(wref.ci, wref.ti).name}`;
+  }
+
+  // Bowls played count (appearances) for this season
+  const metaRows = Object.keys(s.seasonTeamMeta||{}).map(k=>{
+    const st = s.seasonTeamMeta[k];
+    return `<tr><td>${st.name}</td><td>${st.bowls||0}</td><td>${st.champ||0}</td></tr>`;
+  }).join("");
+
+  // Render recap
+  view.innerHTML = `
+    <div class="history-grid">
+      <div class="history-section">
+        <h4 class="history-title">${s.label}</h4>
+        <div><small>Saved: ${new Date(s.createdAt).toLocaleString()}</small></div>
+        <p>${champLine}</p>
+      </div>
+
+      <div class="history-section">
+        <h4 class="history-title">Standings</h4>
+        <table class="history-table">
+          <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr></thead>
+          <tbody>${sRows}</tbody>
+        </table>
+      </div>
+
+      <div class="history-section">
+        <h4 class="history-title">Bowl Appearances & Championships (Season)</h4>
+        <table class="history-table">
+          <thead><tr><th>Team</th><th>Bowls</th><th>Championships</th></tr></thead>
+          <tbody>${metaRows || `<tr><td colspan="3"><em>No postseason data.</em></td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================
    Boot
---------------------------*/
+========================= */
 window.addEventListener("DOMContentLoaded", ()=>{
   // Tabs
   initTabs();
@@ -464,7 +733,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   fillAllPlaySelects();
   neutralDefaultsPlay();
   wirePlayTab(tieLogToPanel);
-  wirePlayPickers(); // ← important so you can load two arbitrary teams
+  wirePlayPickers();
 
   // League tab setup
   setupEditorSelects();
@@ -482,8 +751,5 @@ window.addEventListener("DOMContentLoaded", ()=>{
   // Postseason setup
   renderPostseason(SEASON);
   wirePostseasonButtons();
-
-  // Dev tip: clear storage while iterating if needed
-  // localStorage.removeItem('GBCF_LEAGUE_V5');
-  // localStorage.removeItem('GBCF_SEASON_V2');
 });
+

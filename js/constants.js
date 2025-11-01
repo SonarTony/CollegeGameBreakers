@@ -19,3 +19,4 @@ export const EXP_OPTIONS = ["FR","SO","JR","SR"];
 
 export const LS_LEAGUE = "GBCF_LEAGUE_V5";
 export const LS_SEASON = "GBCF_SEASON_V2";
+export const LS_HISTORY = "GBCF_HISTORY_V1";
