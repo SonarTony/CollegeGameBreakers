@@ -1,3 +1,8 @@
+// js/postseason.js
+// Uses your exact shapes and helpers. Only change: after a round is played,
+// we auto-build the next round if all winners are present, so the next stage
+// appears immediately on re-render (no need to click the previous simulate again).
+
 import { simulateMatchByTeams } from "./season.js";
 import { LS_SEASON } from "./constants.js";
 import { getTeam } from "./ui_league.js";
@@ -60,6 +65,63 @@ function playPair(homeRef, awayRef, LEAGUE){
   return { score:sim.score, details:sim.details, winner };
 }
 
+// ---------- Auto-advance helpers (non-invasive) ----------
+function allWinnersPresent(arr) {
+  return Array.isArray(arr) && arr.length > 0 && arr.every(x => x && x.winner);
+}
+
+function ensureQuartersIfReady(SEASON){
+  const ps = SEASON.postseason; if(!ps) return;
+  // Already built
+  if (ps.quarters && ps.quarters.length) return;
+  // Need winners from bowls 1..8
+  const winners = [];
+  for(let i=1;i<=8;i++){
+    const b = ps.bowlsInitial && ps.bowlsInitial.find(x=>x.id===i);
+    if(!b || !b.winner) return; // not ready
+    winners.push(b.winner);
+  }
+  // Build using your exact mapping
+  ps.quarters = [
+    { id:"Q1", round:"Quarterfinal", home:cloneRef(winners[0]), away:cloneRef(winners[7]), played:false, score:null, details:null, winner:null },
+    { id:"Q2", round:"Quarterfinal", home:cloneRef(winners[1]), away:cloneRef(winners[6]), played:false, score:null, details:null, winner:null },
+    { id:"Q3", round:"Quarterfinal", home:cloneRef(winners[2]), away:cloneRef(winners[5]), played:false, score:null, details:null, winner:null },
+    { id:"Q4", round:"Quarterfinal", home:cloneRef(winners[3]), away:cloneRef(winners[4]), played:false, score:null, details:null, winner:null }
+  ];
+}
+
+function ensureSemisIfReady(SEASON){
+  const ps = SEASON.postseason; if(!ps) return;
+  if (ps.semis && ps.semis.length) return;
+  if (!ps.quarters || ps.quarters.length !== 4) return;
+  if (ps.quarters.some(m=>!m.winner)) return;
+  const w = ps.quarters.map(m=>m.winner);
+  ps.semis = [
+    { id:"S1", round:"Semifinal", home:cloneRef(w[0]), away:cloneRef(w[3]), played:false, score:null, details:null, winner:null },
+    { id:"S2", round:"Semifinal", home:cloneRef(w[1]), away:cloneRef(w[2]), played:false, score:null, details:null, winner:null }
+  ];
+}
+
+function ensureChampionshipIfReady(SEASON){
+  const ps = SEASON.postseason; if(!ps) return;
+  if (ps.championship) return;
+  if (!ps.semis || ps.semis.length !== 2) return;
+  if (ps.semis.some(m=>!m.winner)) return;
+  const [w1,w2] = ps.semis.map(m=>m.winner);
+  ps.championship = { id:"NCG", round:"National Championship", name:"College Football Championship",
+    home:cloneRef(w1), away:cloneRef(w2), played:false, score:null, details:null, winner:null };
+}
+
+function autoAdvance(SEASON){
+  // Build each next round if all prior winners exist
+  ensureQuartersIfReady(SEASON);
+  ensureSemisIfReady(SEASON);
+  ensureChampionshipIfReady(SEASON);
+  savePostseason(SEASON); // persist after any build
+}
+
+// ---------- Public simulate & build functions (original names retained) ----------
+
 export function playUnplayedBowls(SEASON, LEAGUE){
   const ps = SEASON.postseason; if(!ps) return;
   ps.bowlsInitial.forEach(b=>{
@@ -68,10 +130,12 @@ export function playUnplayedBowls(SEASON, LEAGUE){
       b.played = true; b.score = res.score; b.details = res.details; b.winner = res.winner;
     }
   });
-  savePostseason(SEASON);
+  // NEW: auto-build Quarters now that winners exist
+  autoAdvance(SEASON);
 }
 
 export function buildQuarterfinals(SEASON){
+  // Keep your original build (idempotent with autoAdvance)
   const ps = SEASON.postseason; if(!ps) return;
   const winners = [];
   for(let i=1;i<=8;i++){ const b = ps.bowlsInitial.find(x=>x.id===i); if(!b || !b.winner) return; winners.push(b.winner); }
@@ -92,10 +156,12 @@ export function playQuarterfinals(SEASON, LEAGUE){
       m.played = true; m.score = res.score; m.details = res.details; m.winner = res.winner;
     }
   });
-  savePostseason(SEASON);
+  // NEW: auto-build Semis now that QF winners exist
+  autoAdvance(SEASON);
 }
 
 export function buildSemifinals(SEASON){
+  // Keep original build
   const ps = SEASON.postseason; if(!ps) return;
   if(ps.quarters.some(m=>!m.winner)) return;
   const w = ps.quarters.map(m=>m.winner);
@@ -114,10 +180,12 @@ export function playSemifinals(SEASON, LEAGUE){
       m.played = true; m.score = res.score; m.details = res.details; m.winner = res.winner;
     }
   });
-  savePostseason(SEASON);
+  // NEW: auto-build Championship now that SF winners exist
+  autoAdvance(SEASON);
 }
 
 export function buildChampionship(SEASON){
+  // Keep original build
   const ps = SEASON.postseason; if(!ps) return;
   if(ps.semis.some(m=>!m.winner)) return;
   const [w1,w2] = ps.semis.map(m=>m.winner);
