@@ -153,7 +153,7 @@
 
     <section class="controls">
       <button id="rollAll" class="primary">Roll Game</button>
-      <button id="bothRandom" class="ghost">Randomize Both Teams</button>
+      <button class="ghost" id="bothRandom">Randomize Both Teams</button>
     </section>
 
     <section class="scoreboard">
@@ -231,38 +231,32 @@
           <button class="primary" id="btnSimWeek">Simulate Week</button>
           <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
           <button class="ghost" id="btnResetSeason">Reset Season</button>
-          <button class="ghost" id="btnSaveSeasonToHistory">Save Season</button>
-          <button class="ghost" id="btnAdvanceYear">Advance Year</button>
+          <button class="ghost" id="btnSaveSeason" disabled>Save Season</button>
+          <button class="ghost" id="btnAdvanceSeason">Advance Season</button>
         </div>
       </section>
 
       <section class="season-body">
+        <!-- Games + Standings side by side -->
         <div class="games-panel">
           <h3>Games</h3>
           <div id="gamesList" class="games-list"></div>
         </div>
-
         <div class="standings-panel">
           <h3>Standings</h3>
           <div id="standingsAll"></div>
+        </div>
 
-          <!-- POSTSEASON -->
-          <div class="postseason-panel">
-            <h3>Postseason Bowls & Playoffs</h3>
+        <!-- Postseason -->
+        <div class="postseason-panel">
+          <h3>Postseason Bowls & Playoffs</h3>
 
-            <div class="ps-controls">
-              <button class="primary" id="btnGenPostseason">Generate Bowls</button>
-              <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
-            </div>
-
-            <div id="postseasonView"></div>
+          <div class="ps-controls">
+            <button class="primary" id="btnGenPostseason">Generate Bowls</button>
+            <button class="ghost" id="btnPlayAllBowls">Play All Bowls</button>
           </div>
 
-          <!-- YEAR-END SUMMARY -->
-          <div class="postseason-panel" id="yearEndSummaryPanel" style="display:none;">
-            <h3>Year-End Summary</h3>
-            <div id="yearEndSummary"></div>
-          </div>
+          <div id="postseasonView"></div>
         </div>
       </section>
     </div>
@@ -271,22 +265,17 @@
   <!-- HISTORY -->
   <section id="tab-history" class="tabpanel">
     <div class="season-wrap">
-      <section class="season-controls">
-        <div class="picker">
-          <label>View:</label>
-          <select id="historySelect"></select>
-          <button class="ghost" id="btnHistoryAddSeason">Save Current Season</button>
+      <section class="games-panel">
+        <h3>History</h3>
+        <div id="historyList"></div>
+        <div class="editor-footer" style="justify-content:flex-start; margin-top:.6rem;">
           <button class="ghost" id="btnExportHistory">Export History</button>
           <label class="importer">
             <input type="file" id="importHistoryFile" accept=".json" hidden />
-            <span class="ghost buttonlike">Import History</span>
+            <span class="ghost buttonlike">Import History JSON</span>
           </label>
           <button class="ghost" id="btnClearHistory">Delete All History</button>
         </div>
-      </section>
-      <section class="games-panel">
-        <h3 id="historyTitle">Totals</h3>
-        <div id="historyContent"></div>
       </section>
     </div>
   </section>
@@ -300,6 +289,11 @@
 <script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 
