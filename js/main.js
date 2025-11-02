@@ -1,8 +1,8 @@
 // js/main.js
-// Entry point for tabs, Play/League/Season wiring, Postseason controls, and History.
+// Entry point for tabs, Play/League/Season wiring, Postseason, History, and Offseason.
 
 import { OFF_SLOTS, DEF_SLOTS } from "./constants.js";
-import { loadLeague } from "./league.js";
+import { loadLeague, saveLeague } from "./league.js";
 import {
   loadSeason,
   saveSeason,
@@ -57,6 +57,8 @@ import {
   buildTotalsTableHTML, buildSeasonRecapHTML, seasonsList
 } from "./history.js";
 
+import { advanceSeasonAndSummarize } from "./offseason.js";
+
 let LEAGUE = LEAGUE_STATE;
 let SEASON = null;
 
@@ -85,7 +87,7 @@ function initTabs(){
         renderGames(SEASON);
         renderStandingsAll();
         renderPostseason(SEASON);
-        attachPSSectionButtons(); // <-- section-level postseason buttons live inside sections
+        attachPSSectionButtons();
       }
       if(name==="history"){
         renderHistoryUI();
@@ -126,13 +128,8 @@ function renderStandingsAll(){
    Play tab rendering (results & rewatch)
 --------------------------*/
 function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
-  // Jump to Play tab
   document.querySelector('[data-tab="play"]').click();
-
-  // Ensure pickers exist/are populated
   refreshTeamPickers();
-
-  // Show the two teams and the saved breakdown
   applyTeamToSide(homeTeam, "home");
   applyTeamToSide(awayTeam, "away");
 
@@ -148,11 +145,6 @@ function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
   document.getElementById("awayDetail").innerHTML = aRender.body;
 }
 
-/**
- * Play or Rewatch a scheduled season game.
- * - replay=false: simulate if not played, save standings, store full details.
- * - replay=true : do not simulate; render saved score/details into Play tab.
- */
 function playScheduledGame(g, {replay=false}={}){
   const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
   const awayTeam = JSON.parse(JSON.stringify(getTeam(g.away.ci, g.away.ti)));
@@ -162,11 +154,9 @@ function playScheduledGame(g, {replay=false}={}){
     return;
   }
 
-  // Fresh simulation
   const sim = simulateMatchByTeams(homeTeam, awayTeam);
   const { score, details } = sim;
 
-  // First-time play: persist into season + standings
   if (!g.played){
     g.played = true;
     g.score = score;
@@ -186,10 +176,7 @@ function playScheduledGame(g, {replay=false}={}){
     saveSeason(SEASON);
   }
 
-  // Show result in Play tab
   renderGameResultsToPlayTab(homeTeam, awayTeam, details, score);
-
-  // Return to Season view and refresh UI
   document.querySelector('[data-tab="season"]').click();
   renderGames(SEASON);
   renderStandingsAll();
@@ -222,15 +209,33 @@ function wireSeasonButtons(){
     renderStandingsAll();
     renderPostseason(SEASON);
     attachPSSectionButtons();
+    hideYearEndSummary();
   });
 
-  // NEW: Save Season on Season tab (same as History → Save Current Season)
   const btnSave = document.getElementById("btnSaveSeasonToHistory");
   if (btnSave){
     btnSave.addEventListener("click", ()=>{
       if(!confirm("Save current season to history?")) return;
       addCurrentSeasonToHistory(SEASON, LEAGUE);
       alert("Season saved to history.");
+    });
+  }
+
+  const btnAdvance = document.getElementById("btnAdvanceYear");
+  if (btnAdvance){
+    btnAdvance.addEventListener("click", ()=>{
+      if(!confirm("Advance the year? Seniors will graduate and freshmen will be added.")) return;
+      const summaryHTML = advanceSeasonAndSummarize(LEAGUE);
+      saveLeague(LEAGUE);
+      // Optionally reset season schedule for the new year
+      SEASON = createSeasonFromLeague(LEAGUE);
+      saveSeason(SEASON);
+      renderWeekPicker(SEASON, ()=>{ renderGames(SEASON); });
+      renderGames(SEASON);
+      renderStandingsAll();
+      renderPostseason(SEASON);
+      attachPSSectionButtons();
+      showYearEndSummary(summaryHTML);
     });
   }
 }
@@ -255,9 +260,6 @@ function wirePostseasonButtons(){
       attachPSSectionButtons();
     }
   });
-
-  // Single-game handlers already exposed by ui_season + window.* created below.
-  // Section-level "Play ..." buttons are installed by attachPSSectionButtons().
 }
 
 // Install/refresh section-level postseason buttons rendered inside each section
@@ -303,12 +305,11 @@ function attachPSSectionButtons(){
   }
 }
 
-// ---- Single-game Play/Rewatch handlers for postseason rounds ----
+// Single-game handlers used by ui_season
 window.playBowlById = (id)=>{
   const ps = SEASON.postseason; if(!ps) return;
   const b = ps.bowlsInitial.find(x=>x.id===id); if(!b) return;
 
-  // If not yet played, simulate + persist
   if(!b.played){
     const home = JSON.parse(JSON.stringify(getTeam(b.home.ci, b.home.ti)));
     const away = JSON.parse(JSON.stringify(getTeam(b.away.ci, b.away.ti)));
@@ -322,20 +323,15 @@ window.playBowlById = (id)=>{
     attachPSSectionButtons();
   }
 
-  // Rewatch: render stored details to Play tab
   document.querySelector('[data-tab="play"]').click();
   refreshTeamPickers();
-
   const homeTeam = JSON.parse(JSON.stringify(getTeam(b.home.ci, b.home.ti)));
   const awayTeam = JSON.parse(JSON.stringify(getTeam(b.away.ci, b.away.ti)));
-
   applyTeamToSide(homeTeam, "home");
   applyTeamToSide(awayTeam, "away");
-
   const { h, a, hf, af } = b.details;
   const hRender = buildBreakdownHTML(h, a, hf);
   const aRender = buildBreakdownHTML(a, h, af);
-
   document.getElementById("homeScore").textContent = b.score.home;
   document.getElementById("awayScore").textContent = b.score.away;
   document.getElementById("homeSummary").textContent = hRender.summary;
@@ -365,7 +361,6 @@ window.playQuarterById = (id)=>{
     attachPSSectionButtons();
   }
 
-  // Rewatch
   document.querySelector('[data-tab="play"]').click();
   refreshTeamPickers();
   const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
@@ -404,7 +399,6 @@ window.playSemiById = (id)=>{
     attachPSSectionButtons();
   }
 
-  // Rewatch
   document.querySelector('[data-tab="play"]').click();
   refreshTeamPickers();
   const homeTeam = JSON.parse(JSON.stringify(getTeam(m.home.ci, m.home.ti)));
@@ -439,7 +433,6 @@ window.playChampionshipSingle = ()=>{
     attachPSSectionButtons();
   }
 
-  // Rewatch
   document.querySelector('[data-tab="play"]').click();
   refreshTeamPickers();
   const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
@@ -458,6 +451,22 @@ window.playChampionshipSingle = ()=>{
 };
 
 /* -------------------------
+   Year-End Summary panel
+--------------------------*/
+function showYearEndSummary(html){
+  const panel = document.getElementById("yearEndSummaryPanel");
+  const box = document.getElementById("yearEndSummary");
+  if (box){ box.innerHTML = html || "<em>No changes</em>"; }
+  if (panel){ panel.style.display = "block"; }
+}
+function hideYearEndSummary(){
+  const panel = document.getElementById("yearEndSummaryPanel");
+  const box = document.getElementById("yearEndSummary");
+  if (box) box.innerHTML = "";
+  if (panel) panel.style.display = "none";
+}
+
+/* -------------------------
    History tab
 --------------------------*/
 function renderHistoryUI(){
@@ -470,7 +479,6 @@ function renderHistoryUI(){
   sel.innerHTML = "";
   sel.appendChild(seasonsList(hist));
 
-  // Default view: Totals
   sel.value = "TOTALS";
   title.textContent = "Totals";
   content.innerHTML = buildTotalsTableHTML(hist, LEAGUE);
@@ -486,7 +494,6 @@ function renderHistoryUI(){
     }
   };
 
-  // Wire buttons
   const btnAdd = document.getElementById("btnHistoryAddSeason");
   const btnExp = document.getElementById("btnExportHistory");
   const btnImp = document.getElementById("importHistoryFile");
@@ -538,39 +545,28 @@ function renderHistoryUI(){
    Boot
 --------------------------*/
 window.addEventListener("DOMContentLoaded", ()=>{
-  // Tabs
   initTabs();
 
-  // Play tab setup
   fillAllPlaySelects();
   neutralDefaultsPlay();
   wirePlayTab(tieLogToPanel);
 
-  // League tab setup
   setupEditorSelects();
   renderLeagueSidebar();
   clearEditorSelection();
   refreshTeamPickers();
 
-  // Season tab setup
   ensureSeason();
   renderWeekPicker(SEASON, ()=>{ renderGames(SEASON); });
   renderGames(SEASON);
   renderStandingsAll();
   renderPostseason(SEASON);
   wireSeasonButtons();
-
-  // Postseason setup
   wirePostseasonButtons();
   attachPSSectionButtons();
 
-  // History tab initial render
   renderHistoryUI();
-
-  // Dev tip: clear storage while iterating if needed
-  // localStorage.removeItem('GBCF_LEAGUE_V5');
-  // localStorage.removeItem('GBCF_SEASON_V2');
-  // localStorage.removeItem('GBCF_HISTORY_V1');
 });
+
 
 

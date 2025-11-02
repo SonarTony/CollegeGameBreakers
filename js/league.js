@@ -143,3 +143,25 @@ export function loadLeague(){
 }
 
 export function saveLeague(league){ localStorage.setItem(LS_LEAGUE, JSON.stringify(league)); }
+
+/* ========= NEW: helpers used by offseason.js ========= */
+
+export function makeFreshmanOffSlot(tier, slot){
+  const p = TIER_PROFILES[tier];
+  return {
+    name: slot === "OL" ? unitName("OL") : randName(),
+    exp: "FR",
+    o1: pickWeighted(p.ratingWeights),
+    o2: (Math.random() > p.o2_present_p ? null : pickWeighted(p.ratingWeights))
+  };
+}
+
+export function makeFreshmanDefSlot(tier, slot){
+  const p = TIER_PROFILES[tier];
+  return {
+    name: unitName(slot),
+    exp: "FR",
+    d1: pickWeighted(p.ratingWeights),
+    d2: (Math.random() > p.d2_present_p ? null : pickWeighted(p.ratingWeights))
+  };
+}

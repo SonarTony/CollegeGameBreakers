@@ -232,6 +232,7 @@
           <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
           <button class="ghost" id="btnResetSeason">Reset Season</button>
           <button class="ghost" id="btnSaveSeasonToHistory">Save Season</button>
+          <button class="ghost" id="btnAdvanceYear">Advance Year</button>
         </div>
       </section>
 
@@ -249,13 +250,18 @@
           <div class="postseason-panel">
             <h3>Postseason Bowls & Playoffs</h3>
 
-            <!-- keep only generate/reset here; section play buttons live inside sections -->
             <div class="ps-controls">
               <button class="primary" id="btnGenPostseason">Generate Bowls</button>
               <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
             </div>
 
             <div id="postseasonView"></div>
+          </div>
+
+          <!-- YEAR-END SUMMARY -->
+          <div class="postseason-panel" id="yearEndSummaryPanel" style="display:none;">
+            <h3>Year-End Summary</h3>
+            <div id="yearEndSummary"></div>
           </div>
         </div>
       </section>
@@ -294,6 +300,8 @@
 <script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
+
 
 
 
