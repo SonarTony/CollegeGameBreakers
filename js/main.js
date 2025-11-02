@@ -1,6 +1,6 @@
 // js/main.js
-// Entry point for tabs, Play/League/Season wiring, and Postseason controls.
-// Integrated with your existing offseason.js (advanceSeasonAndSummarize).
+// Tabs, Play/League/Season wiring, Postseason controls, and a working History tab.
+// Uses your existing postseason + offseason files without changing mechanics.
 
 import { OFF_SLOTS, DEF_SLOTS, LS_HISTORY } from "./constants.js";
 import { loadLeague } from "./league.js";
@@ -57,23 +57,244 @@ let LEAGUE = LEAGUE_STATE;
 let SEASON = null;
 
 /* -------------------------
-   Small, guarded history helpers (no UI assumptions)
+   HISTORY (storage + helpers)
 --------------------------*/
 function loadHistory(){
   try{
     const raw = localStorage.getItem(LS_HISTORY);
     if (!raw) return { seasons: [] };
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return { seasons: parsed };
+    if (Array.isArray(parsed)) return { seasons: parsed }; // old shape fallback
     if (!parsed || !Array.isArray(parsed.seasons)) return { seasons: [] };
     return parsed;
   }catch{ return { seasons: [] }; }
 }
 function saveHistory(obj){ localStorage.setItem(LS_HISTORY, JSON.stringify(obj)); }
-function pushSeasonToHistory(snapshot){
+function clearHistory(){ saveHistory({ seasons: [] }); }
+function nextSeasonNumber(){ return loadHistory().seasons.length + 1; }
+
+/** Build mapping { "ci:ti" : teamName } at time of save */
+function snapshotTeamNames(){
+  const map = {};
+  LEAGUE.forEach((conf, ci)=>{
+    conf.teams.forEach((t, ti)=>{
+      map[`${ci}:${ti}`] = t.name;
+    });
+  });
+  return map;
+}
+
+/** Count all bowl/playoff appearances (initial bowls + QF/SF/NCG) by team name */
+function countAppearancesForSeason(postseason, teamNameByKey){
+  const counts = {};
+  const inc = (ref)=>{
+    if (!ref) return;
+    const key = `${ref.ci}:${ref.ti}`;
+    const name = teamNameByKey[key] || key;
+    counts[name] = (counts[name]||0) + 1;
+  };
+  if (!postseason) return counts;
+
+  (postseason.bowlsInitial||[]).forEach(b=>{ inc(b.home); inc(b.away); });
+  (postseason.quarters||[]).forEach(m=>{ inc(m.home); inc(m.away); });
+  (postseason.semis||[]).forEach(m=>{ inc(m.home); inc(m.away); });
+  if (postseason.championship){ inc(postseason.championship.home); inc(postseason.championship.away); }
+  return counts;
+}
+
+function winnerNameIfAny(postseason, teamNameByKey){
+  const g = postseason && postseason.championship;
+  if (!g || !g.winner) return null;
+  const key = `${g.winner.ci}:${g.winner.ti}`;
+  return teamNameByKey[key] || key;
+}
+
+/** Build all-time totals: { name: {w,l,bowls,champs} } */
+function computeAllTimeTotals(history){
+  const totals = {};
+  const addTeam = (name)=>{
+    if (!totals[name]) totals[name] = { w:0, l:0, bowls:0, champs:0 };
+  };
+  history.seasons.forEach(sea=>{
+    const names = sea.teamNames || {};
+    // standings
+    Object.entries(sea.standings||{}).forEach(([key, rec])=>{
+      const name = names[key] || key;
+      addTeam(name);
+      totals[name].w += (rec.w||0);
+      totals[name].l += (rec.l||0);
+    });
+    // bowls appearances
+    const apps = countAppearancesForSeason(sea.postseason, names);
+    Object.entries(apps).forEach(([name, c])=>{
+      addTeam(name);
+      totals[name].bowls += c;
+    });
+    // championship
+    const champ = winnerNameIfAny(sea.postseason, names);
+    if (champ){
+      addTeam(champ);
+      totals[champ].champs += 1;
+    }
+  });
+  return totals;
+}
+
+function tableTotalsHTML(totals){
+  // sort by champs, then bowls, then wins
+  const rows = Object.entries(totals).sort((a,b)=>{
+    const A=a[1], B=b[1];
+    return (B.champs - A.champs) || (B.bowls - A.bowls) || (B.w - A.w) || a[0].localeCompare(b[0]);
+  }).map(([name,v])=>(
+    `<tr><td>${name}</td><td>${v.w}</td><td>${v.l}</td><td>${v.bowls}</td><td>${v.champs}</td></tr>`
+  )).join("");
+  return `<table class="standings-table">
+    <thead><tr><th>Team</th><th>W</th><th>L</th><th>Bowl Apps</th><th>Titles</th></tr></thead>
+    <tbody>${rows||""}</tbody>
+  </table>`;
+}
+
+function tableSeasonStandingsHTML(season){
+  // show standings by team name for that season
+  const names = season.teamNames || {};
+  const rows = Object.entries(season.standings||{}).map(([key,rec])=>{
+    const name = names[key] || key;
+    const diff = (rec.pf||0) - (rec.pa||0);
+    return { name, ...rec, diff };
+  }).sort((a,b)=> (b.w - a.w) || (b.diff - a.diff) || (b.pf - a.pf) || a.name.localeCompare(b.name))
+    .map(r=> `<tr><td>${r.name}</td><td>${r.w}</td><td>${r.l}</td><td>${r.pf}</td><td>${r.pa}</td><td>${r.diff>=0?'+':''}${r.diff}</td></tr>`).join("");
+
+  return `<table class="standings-table">
+    <thead><tr><th>Team</th><th>W</th><th>L</th><th>PF</th><th>PA</th><th>Diff</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function seasonSummaryHTML(season){
+  const names = season.teamNames || {};
+  const champ = winnerNameIfAny(season.postseason, names);
+  const apps = countAppearancesForSeason(season.postseason, names);
+  const topApps = Object.entries(apps).sort((a,b)=> b[1]-a[1]).slice(0,10)
+    .map(([n,c])=> `<div class="game-row"><div class="game-names">${n}</div><div class="game-score">${c}</div><div class="game-actions"></div></div>`)
+    .join("") || `<div class="small-muted">No bowls played</div>`;
+
+  return `
+    ${champ ? `<p><strong>Champion:</strong> ${champ}</p>` : `<p><em>No champion recorded</em></p>`}
+    <h4>Top Bowl Appearances</h4>
+    <div class="games-list">${topApps}</div>
+  `;
+}
+
+function exportHistoryJSON(){
   const h = loadHistory();
-  h.seasons.push(snapshot);
+  const blob = new Blob([JSON.stringify(h,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "gbcf_history.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Renders the History tab UI */
+function renderHistoryUI(){
+  const sel = document.getElementById("historySeasonSelect");
+  const totalsBox = document.getElementById("historyTotals");
+  const detailsBox = document.getElementById("historyDetails");
+  const title = document.getElementById("historyTitle");
+  if (!sel || !totalsBox || !detailsBox || !title) return;
+
+  const history = loadHistory();
+
+  // Populate dropdown
+  sel.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "ALL";
+  optAll.textContent = "Totals (All-Time)";
+  sel.appendChild(optAll);
+
+  history.seasons.forEach((s, idx)=>{
+    const opt = document.createElement("option");
+    opt.value = String(idx);
+    opt.textContent = s.label || `Season ${idx+1}`;
+    sel.appendChild(opt);
+  });
+
+  // Default to ALL if nothing selected
+  sel.value = sel.value || "ALL";
+
+  function draw(){
+    const v = sel.value;
+    if (v === "ALL"){
+      title.textContent = "Totals (All-Time)";
+      const totals = computeAllTimeTotals(history);
+      totalsBox.innerHTML = tableTotalsHTML(totals);
+      detailsBox.innerHTML = `<div class="small-muted">Select a specific season to see its standings and champion.</div>`;
+    } else {
+      const idx = parseInt(v,10);
+      const season = history.seasons[idx];
+      title.textContent = season.label || `Season ${idx+1}`;
+      // Left: show season standings
+      totalsBox.innerHTML = tableSeasonStandingsHTML(season);
+      // Right: champ + top bowls list
+      detailsBox.innerHTML = seasonSummaryHTML(season);
+    }
+  }
+  sel.onchange = draw;
+  draw();
+}
+
+function deleteSelectedSeasonFromHistory(){
+  const sel = document.getElementById("historySeasonSelect");
+  if (!sel || sel.value === "ALL") return;
+  const idx = parseInt(sel.value,10);
+  const h = loadHistory();
+  if (idx<0 || idx>=h.seasons.length) return;
+  if (!confirm(`Delete ${h.seasons[idx].label || `Season ${idx+1}`} from history?`)) return;
+  h.seasons.splice(idx,1);
   saveHistory(h);
+  renderHistoryUI();
+}
+
+function wireHistoryTab(){
+  const btnDel = document.getElementById("btnDeleteSeasonFromHistory");
+  if (btnDel){ btnDel.addEventListener("click", deleteSelectedSeasonFromHistory); }
+
+  const btnClr = document.getElementById("btnClearHistory");
+  if (btnClr){
+    btnClr.addEventListener("click", ()=>{
+      if (!confirm("Delete ALL saved seasons from history?")) return;
+      clearHistory();
+      renderHistoryUI();
+    });
+  }
+
+  const btnExp = document.getElementById("btnExportHistory");
+  if (btnExp){ btnExp.addEventListener("click", exportHistoryJSON); }
+
+  const inpImp = document.getElementById("importHistoryFile");
+  if (inpImp){
+    inpImp.addEventListener("change", async (e)=>{
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try{
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        // Accept either {seasons:[...]} or bare [...]
+        const obj = Array.isArray(parsed) ? {seasons: parsed} : parsed;
+        if (!obj || !Array.isArray(obj.seasons)) throw new Error("Invalid history format");
+        saveHistory(obj);
+        renderHistoryUI();
+        alert("History imported.");
+      }catch(err){
+        alert("Failed to import history JSON.");
+      }finally{
+        e.target.value = "";
+      }
+    });
+  }
 }
 
 /* -------------------------
@@ -102,9 +323,13 @@ function initTabs(){
         renderGames(SEASON);
         renderStandingsAll();
         renderPostseason(SEASON);
-        wireSeasonButtons();        // (idempotent binding guarded below)
-        wirePostseasonButtons();    // (idempotent binding guarded below)
-        updateSaveSeasonButton();   // save-season disabled until NCG played
+        wireSeasonButtons();        // idempotent
+        wirePostseasonButtons();    // idempotent
+        updateSaveSeasonButton();
+      }
+      if(name==="history"){
+        renderHistoryUI();
+        wireHistoryTab();
       }
     });
   });
@@ -143,14 +368,11 @@ function renderStandingsAll(){
    Play tab rendering (results & rewatch)
 --------------------------*/
 function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
-  // Jump to Play tab
   const t = document.querySelector('[data-tab="play"]');
   if (t) t.click();
 
-  // Ensure pickers exist/are populated
   refreshTeamPickers();
 
-  // Show the two teams and the saved breakdown
   applyTeamToSide(homeTeam, "home");
   applyTeamToSide(awayTeam, "away");
 
@@ -166,11 +388,6 @@ function renderGameResultsToPlayTab(homeTeam, awayTeam, details, score){
   document.getElementById("awayDetail").innerHTML = aRender.body;
 }
 
-/**
- * Play or Rewatch a scheduled season game.
- * - replay=false: simulate if not played, save standings, store full details.
- * - replay=true : do not simulate; render saved score/details into Play tab.
- */
 function playScheduledGame(g, {replay=false}={}){
   const homeTeam = JSON.parse(JSON.stringify(getTeam(g.home.ci, g.home.ti)));
   const awayTeam = JSON.parse(JSON.stringify(getTeam(g.away.ci, g.away.ti)));
@@ -180,11 +397,9 @@ function playScheduledGame(g, {replay=false}={}){
     return;
   }
 
-  // Fresh simulation
   const sim = simulateMatchByTeams(homeTeam, awayTeam);
   const { score, details } = sim;
 
-  // First-time play: persist into season + standings
   if (!g.played){
     g.played = true;
     g.score = score;
@@ -204,10 +419,8 @@ function playScheduledGame(g, {replay=false}={}){
     saveSeason(SEASON);
   }
 
-  // Show result in Play tab
   renderGameResultsToPlayTab(homeTeam, awayTeam, details, score);
 
-  // Return to Season view and refresh UI
   const s = document.querySelector('[data-tab="season"]');
   if (s) s.click();
   renderGames(SEASON);
@@ -216,7 +429,7 @@ function playScheduledGame(g, {replay=false}={}){
 window.playScheduledGame = playScheduledGame;
 
 /* -------------------------
-   Season tab buttons (guard each bind)
+   Season tab buttons
 --------------------------*/
 let seasonButtonsWired = false;
 function wireSeasonButtons(){
@@ -256,56 +469,57 @@ function wireSeasonButtons(){
     });
   }
 
-  // OPTIONAL: Save Season (only if this button is present in your current index.html)
+  // Save Season (disabled until championship is played)
   const btnSave = document.getElementById("btnSaveSeason");
   if (btnSave){
     btnSave.addEventListener("click", ()=>{
       if (!isSeasonComplete()) return;
+
+      const teamNames = snapshotTeamNames();
+      const history = loadHistory();
+      const sn = nextSeasonNumber();
+
       const snapshot = {
+        id: `S${sn}`,
+        label: `Season ${sn}`,
         ts: Date.now(),
+        teamNames,                 // map "ci:ti" -> team name at save-time
         standings: SEASON.standings,
         postseason: SEASON.postseason
       };
-      pushSeasonToHistory(snapshot);
+      history.seasons.push(snapshot);
+      saveHistory(history);
       updateSaveSeasonButton();
-      alert("Season saved to history.");
+      alert(`Saved ${snapshot.label} to history.`);
+
+      // Refresh History tab if open
+      if (document.getElementById("tab-history")?.classList.contains("active")){
+        renderHistoryUI();
+      }
     });
   }
 
-  // OPTIONAL: Advance Season (only if this button is present in your current index.html)
+  // Advance Season (uses your offseason.js)
   const btnAdv = document.getElementById("btnAdvanceSeason");
   if (btnAdv){
     btnAdv.addEventListener("click", ()=>{
-      // If you require championship first, guard here:
-      // if (!isSeasonComplete() && !confirm("Championship not complete. Advance anyway?")) return;
-
-      // Progress players & replace SRs using YOUR offseason.js
-      const html = advanceSeasonAndSummarize(LEAGUE); // mutates LEAGUE, returns recap HTML
-
-      // Build a fresh schedule for the new year
+      const recapHTML = advanceSeasonAndSummarize(LEAGUE); // mutates league
       SEASON = createSeasonFromLeague(LEAGUE);
       saveSeason(SEASON);
 
-      // Re-render Season tab
       renderWeekPicker(SEASON, ()=>{ renderGames(SEASON); });
       renderGames(SEASON);
       renderStandingsAll();
       renderPostseason(SEASON);
       updateSaveSeasonButton();
 
-      // Present a summary — keep it simple (no new DOM/CSS):
-      const tmp = document.createElement("div");
-      tmp.style.maxHeight = "60vh";
-      tmp.style.overflow = "auto";
-      tmp.innerHTML = html;
-      // Open in a separate window for readability without CSS changes
       const w = window.open("", "_blank");
       if (w && w.document){
         w.document.write("<!doctype html><title>Year-End Recap</title>");
         w.document.write('<meta charset="utf-8"/>');
         w.document.write('<div style="font-family:system-ui,Arial,sans-serif; padding:12px; color:#111;">');
         w.document.write("<h2>Year-End Recap</h2>");
-        w.document.write(tmp.innerHTML);
+        w.document.write(recapHTML || "<em>No changes</em>");
         w.document.write("</div>");
         w.document.close();
       } else {
@@ -328,7 +542,7 @@ function updateSaveSeasonButton(){
 }
 
 /* -------------------------
-   Play tab: load/save pickers for teams
+   Play tab pickers
 --------------------------*/
 function wirePlayPickers(){
   const b1 = document.getElementById("btnLoadHome");
@@ -377,7 +591,7 @@ function wirePlayPickers(){
 }
 
 /* -------------------------
-   Postseason wiring (keep your current flow)
+   Postseason wiring (unchanged)
 --------------------------*/
 let psButtonsWired = false;
 function wirePostseasonButtons(){
@@ -455,7 +669,6 @@ function wirePostseasonButtons(){
     const ps = SEASON.postseason; if(!ps) return;
     const b = ps.bowlsInitial.find(x=>x.id===id); if(!b) return;
 
-    // If not yet played, simulate + persist
     if(!b.played){
       const home = JSON.parse(JSON.stringify(getTeam(b.home.ci, b.home.ti)));
       const away = JSON.parse(JSON.stringify(getTeam(b.away.ci, b.away.ti)));
@@ -469,7 +682,6 @@ function wirePostseasonButtons(){
       updateSaveSeasonButton();
     }
 
-    // Rewatch: render stored details to Play tab
     const t = document.querySelector('[data-tab="play"]');
     if (t) t.click();
     refreshTeamPickers();
@@ -504,7 +716,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   fillAllPlaySelects();
   neutralDefaultsPlay();
   wirePlayTab(tieLogToPanel);
-  wirePlayPickers(); // ← important so you can load two arbitrary teams
+  wirePlayPickers();
 
   // League tab setup
   setupEditorSelects();
@@ -522,10 +734,11 @@ window.addEventListener("DOMContentLoaded", ()=>{
   wirePostseasonButtons();
   updateSaveSeasonButton();
 
-  // Dev tip: clear storage while iterating if needed
-  // localStorage.removeItem('GBCF_LEAGUE_V5');
-  // localStorage.removeItem('GBCF_SEASON_V2');
+  // Prepare History tab (no-op if not selected)
+  renderHistoryUI();
+  wireHistoryTab();
 });
+
 
 
 

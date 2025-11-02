@@ -153,7 +153,7 @@
 
     <section class="controls">
       <button id="rollAll" class="primary">Roll Game</button>
-      <button class="ghost" id="bothRandom">Randomize Both Teams</button>
+      <button id="bothRandom" class="ghost">Randomize Both Teams</button>
     </section>
 
     <section class="scoreboard">
@@ -237,7 +237,6 @@
       </section>
 
       <section class="season-body">
-        <!-- Games + Standings side by side -->
         <div class="games-panel">
           <h3>Games</h3>
           <div id="gamesList" class="games-list"></div>
@@ -247,13 +246,17 @@
           <div id="standingsAll"></div>
         </div>
 
-        <!-- Postseason -->
+        <!-- POSTSEASON -->
         <div class="postseason-panel">
           <h3>Postseason Bowls & Playoffs</h3>
 
           <div class="ps-controls">
             <button class="primary" id="btnGenPostseason">Generate Bowls</button>
             <button class="ghost" id="btnPlayAllBowls">Play All Bowls</button>
+            <button class="ghost" id="btnPlayQuarterfinals">Play Quarterfinals</button>
+            <button class="ghost" id="btnPlaySemifinals">Play Semifinals</button>
+            <button class="ghost" id="btnPlayChampionship">Play Championship</button>
+            <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
           </div>
 
           <div id="postseasonView"></div>
@@ -265,16 +268,28 @@
   <!-- HISTORY -->
   <section id="tab-history" class="tabpanel">
     <div class="season-wrap">
-      <section class="games-panel">
-        <h3>History</h3>
-        <div id="historyList"></div>
-        <div class="editor-footer" style="justify-content:flex-start; margin-top:.6rem;">
+      <section class="season-controls">
+        <div class="picker">
+          <label>View:</label>
+          <select id="historySeasonSelect"></select>
+          <button class="ghost" id="btnDeleteSeasonFromHistory">Delete Season</button>
+          <button class="ghost" id="btnClearHistory">Clear All History</button>
           <button class="ghost" id="btnExportHistory">Export History</button>
           <label class="importer">
             <input type="file" id="importHistoryFile" accept=".json" hidden />
-            <span class="ghost buttonlike">Import History JSON</span>
+            <span class="ghost buttonlike">Import History</span>
           </label>
-          <button class="ghost" id="btnClearHistory">Delete All History</button>
+        </div>
+      </section>
+
+      <section class="season-body">
+        <div class="games-panel">
+          <h3 id="historyTitle">Totals (All-Time)</h3>
+          <div id="historyTotals"></div>
+        </div>
+        <div class="standings-panel">
+          <h3>Details</h3>
+          <div id="historyDetails"></div>
         </div>
       </section>
     </div>
@@ -289,6 +304,7 @@
 <script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
 
 
 
