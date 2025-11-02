@@ -1,6 +1,6 @@
 // js/main.js
 // Tabs, Play/League/Season wiring, Postseason controls, and a working History tab.
-// Uses your existing postseason + offseason files without changing mechanics.
+// Adds robust team-name resolution for history (fallback to current league when teamNames missing).
 
 import { OFF_SLOTS, DEF_SLOTS, LS_HISTORY } from "./constants.js";
 import { loadLeague } from "./league.js";
@@ -64,7 +64,7 @@ function loadHistory(){
     const raw = localStorage.getItem(LS_HISTORY);
     if (!raw) return { seasons: [] };
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return { seasons: parsed }; // old shape fallback
+    if (Array.isArray(parsed)) return { seasons: parsed }; // legacy
     if (!parsed || !Array.isArray(parsed.seasons)) return { seasons: [] };
     return parsed;
   }catch{ return { seasons: [] }; }
@@ -84,13 +84,29 @@ function snapshotTeamNames(){
   return map;
 }
 
-/** Count all bowl/playoff appearances (initial bowls + QF/SF/NCG) by team name */
+/** Robust name resolver:
+ *  1) use snapshot teamNames if present
+ *  2) else if key looks like "ci:ti", fall back to *current league* name
+ *  3) else return key as-is
+ */
+function resolveTeamName(key, teamNames){
+  if (teamNames && teamNames[key]) return teamNames[key];
+  if (/^\d+:\d+$/.test(key)){
+    const [ci, ti] = key.split(":").map(n=>parseInt(n,10));
+    if (LEAGUE[ci] && LEAGUE[ci].teams && LEAGUE[ci].teams[ti]){
+      return LEAGUE[ci].teams[ti].name || key;
+    }
+  }
+  return key;
+}
+
+/** Count all bowl/playoff appearances for a season */
 function countAppearancesForSeason(postseason, teamNameByKey){
   const counts = {};
   const inc = (ref)=>{
     if (!ref) return;
     const key = `${ref.ci}:${ref.ti}`;
-    const name = teamNameByKey[key] || key;
+    const name = resolveTeamName(key, teamNameByKey);
     counts[name] = (counts[name]||0) + 1;
   };
   if (!postseason) return counts;
@@ -106,7 +122,7 @@ function winnerNameIfAny(postseason, teamNameByKey){
   const g = postseason && postseason.championship;
   if (!g || !g.winner) return null;
   const key = `${g.winner.ci}:${g.winner.ti}`;
-  return teamNameByKey[key] || key;
+  return resolveTeamName(key, teamNameByKey);
 }
 
 /** Build all-time totals: { name: {w,l,bowls,champs} } */
@@ -119,7 +135,7 @@ function computeAllTimeTotals(history){
     const names = sea.teamNames || {};
     // standings
     Object.entries(sea.standings||{}).forEach(([key, rec])=>{
-      const name = names[key] || key;
+      const name = resolveTeamName(key, names);
       addTeam(name);
       totals[name].w += (rec.w||0);
       totals[name].l += (rec.l||0);
@@ -141,7 +157,6 @@ function computeAllTimeTotals(history){
 }
 
 function tableTotalsHTML(totals){
-  // sort by champs, then bowls, then wins
   const rows = Object.entries(totals).sort((a,b)=>{
     const A=a[1], B=b[1];
     return (B.champs - A.champs) || (B.bowls - A.bowls) || (B.w - A.w) || a[0].localeCompare(b[0]);
@@ -155,10 +170,9 @@ function tableTotalsHTML(totals){
 }
 
 function tableSeasonStandingsHTML(season){
-  // show standings by team name for that season
   const names = season.teamNames || {};
   const rows = Object.entries(season.standings||{}).map(([key,rec])=>{
-    const name = names[key] || key;
+    const name = resolveTeamName(key, names);
     const diff = (rec.pf||0) - (rec.pa||0);
     return { name, ...rec, diff };
   }).sort((a,b)=> (b.w - a.w) || (b.diff - a.diff) || (b.pf - a.pf) || a.name.localeCompare(b.name))
@@ -236,9 +250,7 @@ function renderHistoryUI(){
       const idx = parseInt(v,10);
       const season = history.seasons[idx];
       title.textContent = season.label || `Season ${idx+1}`;
-      // Left: show season standings
       totalsBox.innerHTML = tableSeasonStandingsHTML(season);
-      // Right: champ + top bowls list
       detailsBox.innerHTML = seasonSummaryHTML(season);
     }
   }
@@ -734,7 +746,7 @@ window.addEventListener("DOMContentLoaded", ()=>{
   wirePostseasonButtons();
   updateSaveSeasonButton();
 
-  // Prepare History tab (no-op if not selected)
+  // Prepare History tab (safe to render on load)
   renderHistoryUI();
   wireHistoryTab();
 });
