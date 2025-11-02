@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gamebreakers College Football</title>
-  <link rel="stylesheet" href="styles.css?v=3"/>
+  <link rel="stylesheet" href="styles.css?v=1"/>
 </head>
 <body>
 <header class="app-header">
@@ -231,7 +231,8 @@
           <button class="primary" id="btnSimWeek">Simulate Week</button>
           <button class="ghost" id="btnSimSeason">Simulate Full Season</button>
           <button class="ghost" id="btnResetSeason">Reset Season</button>
-          <button class="ghost" id="btnSaveSeasonHistory">Save Season to History</button>
+          <button class="ghost" id="btnSaveSeason" disabled>Save Season</button>
+          <button class="ghost" id="btnAdvanceSeason">Advance Season</button>
         </div>
       </section>
 
@@ -245,11 +246,16 @@
           <div id="standingsAll"></div>
         </div>
 
+        <!-- POSTSEASON -->
         <div class="postseason-panel">
           <h3>Postseason Bowls & Playoffs</h3>
 
           <div class="ps-controls">
             <button class="primary" id="btnGenPostseason">Generate Bowls</button>
+            <button class="ghost" id="btnPlayAllBowls">Play All Bowls</button>
+            <button class="ghost" id="btnPlayQuarterfinals">Play Quarterfinals</button>
+            <button class="ghost" id="btnPlaySemifinals">Play Semifinals</button>
+            <button class="ghost" id="btnPlayChampionship">Play Championship</button>
             <button class="ghost" id="btnResetPostseason">Reset Postseason</button>
           </div>
 
@@ -261,22 +267,31 @@
 
   <!-- HISTORY -->
   <section id="tab-history" class="tabpanel">
-    <div class="history-wrap">
-      <div class="history-controls">
-        <label for="historySelect">View:</label>
-        <select id="historySelect"></select>
+    <div class="season-wrap">
+      <section class="season-controls">
+        <div class="picker">
+          <label>View:</label>
+          <select id="historySeasonSelect"></select>
+          <button class="ghost" id="btnDeleteSeasonFromHistory">Delete Season</button>
+          <button class="ghost" id="btnClearHistory">Clear All History</button>
+          <button class="ghost" id="btnExportHistory">Export History</button>
+          <label class="importer">
+            <input type="file" id="importHistoryFile" accept=".json" hidden />
+            <span class="ghost buttonlike">Import History</span>
+          </label>
+        </div>
+      </section>
 
-        <button class="ghost" id="btnExportHistory">Export History JSON</button>
-
-        <label class="importer">
-          <input type="file" id="importHistoryFile" accept=".json" hidden />
-          <span class="ghost buttonlike">Import History JSON</span>
-        </label>
-
-        <button class="ghost" id="btnClearHistory">Delete All History</button>
-      </div>
-
-      <div id="historyView"></div>
+      <section class="season-body">
+        <div class="games-panel">
+          <h3 id="historyTitle">Totals (All-Time)</h3>
+          <div id="historyTotals"></div>
+        </div>
+        <div class="standings-panel">
+          <h3>Details</h3>
+          <div id="historyDetails"></div>
+        </div>
+      </section>
     </div>
   </section>
 </main>
@@ -286,9 +301,17 @@
 </footer>
 
 <!-- Modules -->
-<script type="module" src="./js/main.js?v=4"></script>
+<script type="module" src="./js/main.js?v=1"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 
 
 
